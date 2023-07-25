@@ -1,0 +1,22 @@
+.terms {
+  h3 {
+    font-size: initial;
+  }
+
+  ul {
+    list-style: none;
+
+    li {
+      a {
+        color: $accent;
+      }
+    }
+
+    li:not(:empty):before {
+      content: '-';
+      position: absolute;
+      left: -20px;
+      color: $accent;
+    }
+  }
+}

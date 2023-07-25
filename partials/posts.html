@@ -1,0 +1,31 @@
+<div class="posts">
+ {{range .Posts}}
+  <article class="post on-list">
+    <h1 class="post-title">{{ .Title }}</h1>
+    <div class="post-meta">
+      {{- if .CreatedAt -}}
+        <time class="post-date">
+          {{- .CreatedAt.Format "2006-01-02" -}}
+        </time>
+      {{- end -}}
+
+      {{- with .Params.Author -}}
+      <span class="post-author">{{ . }}</span>
+      {{- end -}}
+
+      {{ if .Params.tags }}
+      <span class="">
+        {{ range .Params.tags }}
+        {{- . -}}&nbsp;
+        {{ end }}
+      </span>
+      {{ end }}
+    </div>
+
+
+    <div class="post-content">
+      {{ .Content }}
+    </div>
+  </article>
+  {{end}}
+</div>

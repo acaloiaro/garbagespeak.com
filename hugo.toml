@@ -1,0 +1,114 @@
+baseURL = '/'
+languageCode = 'en-us'
+title = "garbage speak :: speak like your boss' boss"
+theme = 'terminal'
+enableInlineShortcodes = true
+
+
+[params]
+  languageName = "English"
+  subtitle = "The personal website of Adriano Caloiaro, covering technology, programming, technical howtos, life as a digital nomad, and more"
+  owner = ""
+  keywords = "garbage speak, corporate speak, corporate langauge, corporate jargon"
+  copyright = "Garbage Speak"
+  menuMore = "Show more"
+  readMore = "Read more"
+  readOtherPosts = "More garbage"
+  newerPosts = "Newer speaks"
+  olderPosts = "Older speaks"
+  missingContentMessage = "Garbage not found..."
+  missingBackButtonLabel = "Circle back to garbage list"
+  minuteReadingTime = "min read"
+  words = "words"
+
+
+  # dir name of your main content (default is `content/posts`).
+  # the list of set content will show up on your index page (baseurl).
+  contentTypeName = "posts"
+
+  # ["orange", "blue", "red", "green", "pink"]
+  themeColor = "blue"
+
+  # if you set this to 0, only submenu trigger will be visible
+  showMenuItems = 4
+
+  # show selector to switch language
+  showLanguageSelector = false
+
+  # set theme to full screen width
+  fullWidthTheme = false
+
+  # center theme with default width
+  centerTheme = true
+
+  # if your resource directory contains an image called `cover.(jpg|png|webp)`,
+  # then the file will be used as a cover automatically.
+  # With this option you don't have to put the `cover` param in a front-matter.
+  autoCover = true
+
+  # set post to show the last updated
+  # If you use git, you can set `enableGitInfo` to `true` and then post will automatically get the last updated
+  showLastUpdated = true
+  enableGitInfo = true
+  # set a custom favicon (default is a `themeColor` square)
+  # favicon = "favicon.ico"
+
+  # Provide a string as a prefix for the last update date. By default, it looks like this: 2020-xx-xx [Updated: 2020-xx-xx] :: Author
+  updatedDatePrefix = "Updated"
+
+  # set all headings to their default size (depending on browser settings)
+  # oneHeadingSize = true # default
+
+  # whether to show a page's estimated reading time
+  readingTime = false # default
+
+  # whether to show a table of contents
+  # can be overridden in a page's front-matter
+  Toc = false # default
+
+  # set title for the table of contents
+  # can be overridden in a page's front-matter
+  TocTitle = "Content Overview" # default
+
+
+[params.twitter]
+  # set Twitter handles for Twitter cards
+  # see https://developer.twitter.com/en/docs/tweets/optimize-with-cards/guides/getting-started#card-and-content-attribution
+  # do not include @
+  creator = ""
+  site = ""
+
+[languages]
+  [languages.en]
+    [languages.en.params.logo]
+      logoText = "garbage speak :: speak like your boss' boss"
+      logoHomeLink = "/"
+
+    [languages.en.menu]
+      [[languages.en.menu.main]]
+        identifier = "about"
+        name = "What is Garbage Speak?"
+        url = "/about/"
+
+      [[languages.en.menu.main]]
+        identifier = "garbage"
+        name = "Latest Garbage"
+        url = "/"
+
+      [[languages.en.menu.main]]
+        identifier = "dictionary"
+        name = "Dictionary"
+        url = "/dictionary"
+
+      [[languages.en.menu.main]]
+        identifier = "faq"
+        name = "FAQ"
+        url = "/faq"
+
+[module]
+  # In case you would like to make changes to the theme and keep it locally in you repository,
+  # uncomment the line below (and correct the local path if necessary).
+  # --
+  replacements = "github.com/panr/hugo-theme-terminal/v3 -> terminal"
+[[module.imports]]
+  path = 'github.com/panr/hugo-theme-terminal/v3'
