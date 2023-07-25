@@ -12,6 +12,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/alexedwards/scs/pgxstore"
+	"github.com/alexedwards/scs/v2"
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -26,8 +28,10 @@ var migrations embed.FS
 var content embed.FS
 
 var db *pgxpool.Pool
+var sessions *scs.SessionManager
+var sessionStore *pgxstore.PostgresStore
 
-// run migrations and acquire a database connection pool
+// run migrations, acquire a database connection pool, and create the session store
 func init() {
 	d, err := iofs.New(migrations, "migrations")
 	if err != nil {
@@ -49,10 +53,17 @@ func init() {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
 	}
+
+	sessions = scs.New()
+
+	sessionStore = pgxstore.NewWithCleanupInterval(db, 10*time.Second)
+	sessions.Store = sessionStore
 }
 
 func main() {
 	defer db.Close()
+	defer sessionStore.StopCleanup()
+
 	mux := http.NewServeMux()
 	serverRoot, _ := fs.Sub(content, "public")
 
@@ -64,7 +75,7 @@ func main() {
 	mux.HandleFunc("/hello_world_form", cors(http.HandlerFunc(helloWorldForm)))
 
 	fmt.Printf("Starting API server on port 1314\n")
-	if err := http.ListenAndServe("0.0.0.0:1314", mux); err != nil {
+	if err := http.ListenAndServe("0.0.0.0:1314", sessions.LoadAndSave(mux)); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -79,7 +90,7 @@ func helloWorld(w http.ResponseWriter, r *http.Request) {
 	if name == "null" || name == "" {
 		name = "World"
 	}
-
+	sessions.Put(r.Context(), "message", "Hello from a session!")
 	tmpl := template.Must(template.ParseFiles("partials/posts.html"))
 	var buff = bytes.NewBufferString("")
 	type Garbage struct {
@@ -112,7 +123,8 @@ func helloWorld(w http.ResponseWriter, r *http.Request) {
 		ise(err, w)
 		return
 	}
-
+	msg := sessions.GetString(r.Context(), "message")
+	w.Header().Add("X-Message", msg)
 	w.WriteHeader(http.StatusOK)
 	w.Write(buff.Bytes())
 }
