@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"embed"
 	"fmt"
 	"io/fs"
@@ -11,9 +12,11 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 //go:embed migrations/*.sql
@@ -22,6 +25,9 @@ var migrations embed.FS
 //go:embed all:public
 var content embed.FS
 
+var db *pgxpool.Pool
+
+// run migrations and acquire a database connection pool
 func init() {
 	d, err := iofs.New(migrations, "migrations")
 	if err != nil {
@@ -37,32 +43,21 @@ func init() {
 	if err != nil {
 		log.Println(err)
 	}
+
+	db, err = pgxpool.New(context.Background(), os.Getenv("POSTGRES_URL"))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 func main() {
+	defer db.Close()
 	mux := http.NewServeMux()
 	serverRoot, _ := fs.Sub(content, "public")
 
 	// Serve all hugo content (the 'public' directory) at the root url
 	mux.Handle("/", http.FileServer(http.FS(serverRoot)))
-
-	cors := func(h http.Handler) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
-			// in development, the Origin is the the Hugo server, i.e. http://localhost:1313
-			// but in production, it is the domain name where one's site is deployed
-			//
-			// CHANGE THIS: You likely do not want to allow any origin (*) in production. The value should be the base URL of
-			// where your static content is served
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, hx-target, hx-current-url, hx-request")
-			if r.Method == "OPTIONS" {
-				w.WriteHeader(http.StatusNoContent)
-				return
-			}
-			h.ServeHTTP(w, r)
-		}
-	}
 
 	// Add any number of handlers for custom endpoints here
 	mux.HandleFunc("/garbage_bin", cors(http.HandlerFunc(helloWorld)))
@@ -87,23 +82,32 @@ func helloWorld(w http.ResponseWriter, r *http.Request) {
 
 	tmpl := template.Must(template.ParseFiles("partials/posts.html"))
 	var buff = bytes.NewBufferString("")
-	type Post struct {
+	type Garbage struct {
+		ID        int64
+		OwnerID   *int64
 		Title     string
-		CreatedAt time.Time
 		Content   string
-		Params    any
+		Metadata  map[string]any
+		CreatedAt time.Time
 	}
-	posts := []Post{}
-	posts = append(posts, Post{
+	ctx := context.Background()
+	posts := []*Garbage{}
+	err := pgxscan.Select(ctx, db, &posts, `SELECT id,owner_id,title, content, metadata, created_at FROM garbages`)
+	if err != nil {
+		log.Println("error fetching garbage", err)
+		return
+	}
+	log.Println(posts)
+	posts = append(posts, &Garbage{
 		Title:     "What's the ask here?",
 		Content:   "If it's not too much of a reach, we can implement a solve by EOD.",
 		CreatedAt: time.Now(),
-		Params: map[string]any{
+		Metadata: map[string]any{
 			"Author": "Adriano Caloiaro",
 			"tags":   []string{"ask", "reach", "solve"},
 		}})
 
-	err := tmpl.Execute(buff, map[string]any{"Posts": posts})
+	err = tmpl.Execute(buff, map[string]any{"Posts": posts})
 	if err != nil {
 		ise(err, w)
 		return
@@ -119,21 +123,37 @@ func helloWorld(w http.ResponseWriter, r *http.Request) {
 //
 // It responds with a simple greeting HTML partial
 func helloWorldForm(w http.ResponseWriter, r *http.Request) {
-	name := "World"
 	// The name is not in the query param, let's see if it was submitted as a form
 	if err := r.ParseForm(); err != nil {
 		ise(err, w)
 		return
 	}
 
-	name = r.FormValue("name")
-	if err := partials.HelloWorldGreeting(name).Render(r.Context(), w); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	// TODO: Unimplemented
+	w.WriteHeader(http.StatusInternalServerError)
+
 }
 
 func ise(err error, w http.ResponseWriter) {
 	fmt.Fprintf(w, "error: %v", err)
 	w.WriteHeader(http.StatusInternalServerError)
+}
+
+// cors middleware
+func cors(h http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// in development, the Origin is the the Hugo server, i.e. http://localhost:1313
+		// but in production, it is the domain name where one's site is deployed
+		//
+		// CHANGE THIS: You likely do not want to allow any origin (*) in production. The value should be the base URL of
+		// where your static content is served
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, hx-target, hx-current-url, hx-request")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		h.ServeHTTP(w, r)
+	}
 }

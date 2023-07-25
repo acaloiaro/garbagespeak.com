@@ -9,13 +9,13 @@
         </time>
       {{- end -}}
 
-      {{- with .Params.Author -}}
+      {{- with .Metadata.author -}}
       <span class="post-author">{{ . }}</span>
       {{- end -}}
 
-      {{ if .Params.tags }}
+      {{ if .Metadata.tags }}
       <span class="">
-        {{ range .Params.tags }}
+        {{ range .Metadata.tags }}
         {{- . -}}&nbsp;
         {{ end }}
       </span>
