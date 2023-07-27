@@ -1,8 +1,10 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE TABLE IF NOT EXISTS users(
-  id bigserial PRIMARY KEY,
-  username VARCHAR (50) UNIQUE NOT NULL,
-  password VARCHAR (50) NOT NULL,
-  email VARCHAR (300) UNIQUE NOT NULL,
+  id uuid PRIMARY KEY default uuid_generate_v4(),
+  username VARCHAR (20) UNIQUE NOT NULL,
+  password VARCHAR (100) NOT NULL,
+  email TEXT UNIQUE NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone
 );

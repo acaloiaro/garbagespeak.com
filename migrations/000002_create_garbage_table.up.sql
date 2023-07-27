@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS garbages(
-  id bigserial PRIMARY KEY,
-  owner_id bigint,
+  id uuid PRIMARY KEY default uuid_generate_v4(),
+  owner_id uuid,
   title text NOT NULL,
   content text NOT NULL,
   metadata jsonb default '{}'::jsonb,
