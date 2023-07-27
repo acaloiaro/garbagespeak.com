@@ -17,6 +17,8 @@ require (
 )
 
 require (
+	github.com/go-chi/chi/v5 v5.0.10 // indirect
+	github.com/go-chi/cors v1.2.1 // indirect
 	github.com/gofrs/uuid/v5 v5.0.0 // indirect
 	github.com/guregu/null v4.0.0+incompatible // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect

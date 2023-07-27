@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"embed"
 	"fmt"
-	"io/fs"
 	"log"
 	"net"
 	"net/http"
@@ -24,6 +23,9 @@ import (
 	"github.com/alexedwards/scs/pgxstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/georgysavva/scany/v2/pgxscan"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/gofrs/uuid"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -69,11 +71,6 @@ type UserEmailVerification struct {
 //go:embed migrations/*.sql
 var migrations embed.FS
 
-// Embed all hugo output as 'public'
-//
-//go:embed all:public
-var content embed.FS
-
 var db *pgxpool.Pool
 var sessions *scs.SessionManager
 var sessionStore *pgxstore.PostgresStore
@@ -113,7 +110,14 @@ func init() {
 	}
 
 	sessions = scs.New()
-	sessionStore = pgxstore.NewWithCleanupInterval(db, 10*time.Second)
+	sessionStore = pgxstore.New(db)
+
+	sessions.Cookie.Name = "session_id"
+	//sessions.Cookie.Domain = siteDomain()
+	//sessions.Cookie.HttpOnly = true
+	//sessions.Cookie.Persist = true
+	sessions.Cookie.SameSite = http.SameSiteNoneMode
+	//sessions.Cookie.Secure = true
 	sessions.Store = sessionStore
 
 	ctx := context.Background()
@@ -139,20 +143,70 @@ func main() {
 	defer sessionStore.StopCleanup()
 	defer NQ.Shutdown(context.Background())
 
-	mux := http.NewServeMux()
-	serverRoot, _ := fs.Sub(content, "public")
-
-	// Serve all hugo content (the 'public' directory) at the root url
-	mux.Handle("/", http.FileServer(http.FS(serverRoot)))
+	r := chi.NewRouter()
+	//r.Use(sessions.LoadAndSave)
+	r.Use(middleware.Logger)
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Recoverer)
+	r.Use(cors.Handler(cors.Options{
+		AllowCredentials: true,
+		AllowedOrigins:   []string{"http://localhost:1313", fmt.Sprintf("https://%s", os.Getenv("SITE_DOMAIN"))},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "hx-target", "hx-current-url", "hx-request"},
+		ExposedHeaders:   []string{"Link"},
+		MaxAge:           300, // Maximum value not ignored by any of major browsers
+	}))
 
 	// Add any number of handlers for custom endpoints here
-	mux.HandleFunc("/garbage_bin", cors(http.HandlerFunc(garbageBin)))
-	mux.HandleFunc("/users/create", cors(http.HandlerFunc(createAccount)))
+	r.Get("/garbage_bin", garbageBin)
+	r.Route("/users", func(r chi.Router) {
+		r.Post("/create", createAccount)
+		r.Get("/email_verification/{uev_id}", emailVerification)
+	})
 
 	fmt.Printf("Starting API server on port 1314\n")
-	if err := http.ListenAndServe("0.0.0.0:1314", sessions.LoadAndSave(mux)); err != nil {
+	if err := http.ListenAndServe("0.0.0.0:1314", sessions.LoadAndSave(r)); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// emailVerification takes a UserEmailVerification ID, and if it exists, verifies the associated User account by
+// deleting the UEV record (user login's check if a UEV exists for a User before permitting login)
+func emailVerification(w http.ResponseWriter, r *http.Request) {
+	// user email verification id
+	uevID := chi.URLParam(r, "uev_id")
+
+	tx, err := db.Begin(r.Context())
+	if err != nil {
+		ise(err, w)
+		return
+	}
+	// Rollback is safe to call even if the tx is already closed, so if
+	// the tx commits successfully, this is a no-op
+	defer tx.Rollback(r.Context())
+
+	var userID string
+	err = tx.QueryRow(r.Context(), "DELETE FROM user_email_verifications WHERE id = $1 RETURNING user_id", uevID).Scan(&userID)
+	if err != nil {
+		log.Fatalf("can't verify email address: %v", err)
+	}
+
+	err = sessions.RenewToken(r.Context())
+	if err != nil {
+		ise(err, w)
+		return
+	}
+
+	log.Println("User ID:", userID)
+	// create the user's session
+	sessions.Put(r.Context(), "userID", userID)
+	tx.Commit(r.Context())
+
+	userIDFromSession := sessions.GetString(r.Context(), "userID")
+	log.Println("id from session before redir", userIDFromSession)
+
+	http.Redirect(w, r, baseURL(), http.StatusFound)
 }
 
 // createAccount creates new accounts
@@ -222,7 +276,7 @@ func createAccount(w http.ResponseWriter, r *http.Request) {
 		Queue: "welcome_email",
 		Payload: map[string]interface{}{
 			"recipient":        email,
-			"verification_url": fmt.Sprintf("%s/users/email_verification/%s", baseURL(), uevID),
+			"verification_url": fmt.Sprintf("%s/users/email_verification/%s", apiURL(), uevID),
 		},
 	})
 	if err != nil {
@@ -238,7 +292,7 @@ func garbageBin(w http.ResponseWriter, r *http.Request) {
 	if name == "null" || name == "" {
 		name = "World"
 	}
-	sessions.Put(r.Context(), "message", "Hello from a session!")
+
 	tmpl := template.Must(template.ParseFiles("partials/posts.html"))
 	var buff = bytes.NewBufferString("")
 	ctx := context.Background()
@@ -253,34 +307,13 @@ func garbageBin(w http.ResponseWriter, r *http.Request) {
 		ise(err, w)
 		return
 	}
-	msg := sessions.GetString(r.Context(), "message")
-	w.Header().Add("X-Message", msg)
+
+	userIDFromSession := sessions.GetString(r.Context(), "userID")
+	log.Println("id from session after redir", userIDFromSession)
+
+	log.Println("foobar key contains", sessions.GetString(r.Context(), "foobar"))
 	w.WriteHeader(http.StatusOK)
 	w.Write(buff.Bytes())
-}
-
-func ise(err error, w http.ResponseWriter) {
-	fmt.Fprintf(w, "error: %v", err)
-	w.WriteHeader(http.StatusInternalServerError)
-}
-
-// cors middleware
-func cors(h http.Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// in development, the Origin is the the Hugo server, i.e. http://localhost:1313
-		// but in production, it is the domain name where one's site is deployed
-		//
-		// CHANGE THIS: You likely do not want to allow any origin (*) in production. The value should be the base URL of
-		// where your static content is served
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, hx-target, hx-current-url, hx-request")
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		h.ServeHTTP(w, r)
-	}
 }
 
 // sendWelcomeEmail sends an email to recipient containing a special URL that only that can know, for the purpose of
@@ -389,7 +422,7 @@ func env() string {
 	return "development"
 }
 
-// baseURL returns the server's base URL, e.g. http://localhost:1313 in development, https://<SITE_DOMAIN> in production
+// baseURL returns the site's base URL, e.g. http://localhost:1313 in development, https://<SITE_DOMAIN> in production
 func baseURL() string {
 	if env() == "development" && siteDomain() == "" {
 		addr := os.Getenv("HOSTNAME")
@@ -405,4 +438,28 @@ func baseURL() string {
 
 		return fmt.Sprintf("https://%s", addr)
 	}
+}
+
+// apiURL returns the server's base URL, e.g. http://localhost:1314 in development, https://<API_HOST> in production
+func apiURL() string {
+	if env() == "development" && siteDomain() == "" {
+		addr := os.Getenv("HOSTNAME")
+		if addr == "" {
+			addr = "localhost"
+		}
+		return fmt.Sprintf("http://%s:1314", addr)
+	} else {
+		addr := os.Getenv("API_HOST")
+		if addr == "" {
+			addr = siteDomain()
+		}
+
+		return fmt.Sprintf("https://%s", addr)
+	}
+
+}
+
+func ise(err error, w http.ResponseWriter) {
+	fmt.Fprintf(w, "error: %v", err)
+	w.WriteHeader(http.StatusInternalServerError)
 }
