@@ -19,11 +19,35 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/crypto/bcrypt"
 )
 
+// Garbage represents 'garbage' records from the database
+type Garbage struct {
+	ID        int64
+	OwnerID   *int64
+	Title     string
+	Content   string
+	Metadata  map[string]any
+	CreatedAt time.Time
+}
+
+// User represents 'user' records from the database
+type User struct {
+	ID           int64
+	Username     string
+	PasswordHash string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+// embed all migrations with the binary
+//
 //go:embed migrations/*.sql
 var migrations embed.FS
 
+// Embed all hugo output as 'public'
+//
 //go:embed all:public
 var content embed.FS
 
@@ -71,8 +95,8 @@ func main() {
 	mux.Handle("/", http.FileServer(http.FS(serverRoot)))
 
 	// Add any number of handlers for custom endpoints here
-	mux.HandleFunc("/garbage_bin", cors(http.HandlerFunc(helloWorld)))
-	mux.HandleFunc("/hello_world_form", cors(http.HandlerFunc(helloWorldForm)))
+	mux.HandleFunc("/garbage_bin", cors(http.HandlerFunc(garbageBin)))
+	mux.HandleFunc("/users/create", cors(http.HandlerFunc(createAccount)))
 
 	fmt.Printf("Starting API server on port 1314\n")
 	if err := http.ListenAndServe("0.0.0.0:1314", sessions.LoadAndSave(mux)); err != nil {
@@ -80,12 +104,54 @@ func main() {
 	}
 }
 
-// the handler accepts GET requests to /hello_world
-// It checks the URL params for the "name" param and populates the html/template variable with its value
-// if no "name" url parameter is present, "name" is defaulted to "World"
-//
-// It responds with the the HTML partial `partials/helloworld.html`
-func helloWorld(w http.ResponseWriter, r *http.Request) {
+// createAccount creates new accounts
+func createAccount(w http.ResponseWriter, r *http.Request) {
+	// The name is not in the query param, let's see if it was submitted as a form
+	if err := r.ParseForm(); err != nil {
+		ise(err, w)
+		return
+	}
+
+	username := r.PostForm.Get("username")
+	if len(username) == 0 {
+		w.WriteHeader(400)
+		return
+	}
+
+	password := r.PostForm.Get("password")
+	if len(password) < 8 {
+		w.WriteHeader(400)
+		return
+	}
+
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Println("error hashing password", err)
+		ise(err, w)
+	}
+
+	ctx := context.Background()
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		ise(err, w)
+	}
+	// Rollback is safe to call even if the tx is already closed, so if
+	// the tx commits successfully, this is a no-op
+	defer tx.Rollback(ctx)
+
+	_, err = tx.Exec(ctx, "insert into users(username, password) values (?, ?)", username, passwordHash)
+	if err != nil {
+		ise(err, w)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		ise(err, w)
+	}
+}
+
+// garbageBin returns the latest garbage
+func garbageBin(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get("name")
 	if name == "null" || name == "" {
 		name = "World"
@@ -93,14 +159,6 @@ func helloWorld(w http.ResponseWriter, r *http.Request) {
 	sessions.Put(r.Context(), "message", "Hello from a session!")
 	tmpl := template.Must(template.ParseFiles("partials/posts.html"))
 	var buff = bytes.NewBufferString("")
-	type Garbage struct {
-		ID        int64
-		OwnerID   *int64
-		Title     string
-		Content   string
-		Metadata  map[string]any
-		CreatedAt time.Time
-	}
 	ctx := context.Background()
 	posts := []*Garbage{}
 	err := pgxscan.Select(ctx, db, &posts, `SELECT id,owner_id,title, content, metadata, created_at FROM garbages`)
@@ -108,16 +166,6 @@ func helloWorld(w http.ResponseWriter, r *http.Request) {
 		log.Println("error fetching garbage", err)
 		return
 	}
-	log.Println(posts)
-	posts = append(posts, &Garbage{
-		Title:     "What's the ask here?",
-		Content:   "If it's not too much of a reach, we can implement a solve by EOD.",
-		CreatedAt: time.Now(),
-		Metadata: map[string]any{
-			"Author": "Adriano Caloiaro",
-			"tags":   []string{"ask", "reach", "solve"},
-		}})
-
 	err = tmpl.Execute(buff, map[string]any{"Posts": posts})
 	if err != nil {
 		ise(err, w)
