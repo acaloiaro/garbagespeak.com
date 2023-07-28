@@ -29,5 +29,7 @@
         {{ end }}
       {{ end }}
     {{ end }}
+
+    <div hx-get="{{ .Site.Params.apiBaseUrl }}/nav/user_items" hx-trigger="load" hx-swap="outerHTML">
   </ul>
 </nav>

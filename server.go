@@ -160,6 +160,7 @@ func main() {
 
 	// Add any number of handlers for custom endpoints here
 	r.Get("/garbage_bin", garbageBin)
+	r.Get("/nav/user_items", navUserItems)
 	r.Route("/users", func(r chi.Router) {
 		r.Get("/create", newAccount)
 		r.Post("/create", createAccount)
@@ -170,6 +171,30 @@ func main() {
 	if err := http.ListenAndServe("0.0.0.0:1314", sessions.LoadAndSave(r)); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// navUserItems returns a nav items depending on whether the user is logged in
+func navUserItems(w http.ResponseWriter, r *http.Request) {
+	userID := sessions.GetString(r.Context(), "userID")
+	var tmpl *template.Template
+
+	log.Println("user id:", userID)
+	if userID == "" {
+		tmpl = template.Must(template.ParseFiles("partials/nav/non_user_nav_items.html"))
+	} else {
+		tmpl = template.Must(template.ParseFiles("partials/nav/user_nav_items.html"))
+	}
+
+	var buff = bytes.NewBufferString("")
+	err := tmpl.Execute(buff, map[string]any{})
+	if err != nil {
+		ise(err, w)
+		return
+	}
+
+	w.Header().Add("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	w.Write(buff.Bytes())
 }
 
 // newAccount serves the new account form
@@ -185,7 +210,6 @@ func newAccount(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
 	w.Write(buff.Bytes())
-
 }
 
 // emailVerification takes a UserEmailVerification ID, and if it exists, verifies the associated User account by
@@ -219,9 +243,6 @@ func emailVerification(w http.ResponseWriter, r *http.Request) {
 	// create the user's session
 	sessions.Put(r.Context(), "userID", userID)
 	tx.Commit(r.Context())
-
-	userIDFromSession := sessions.GetString(r.Context(), "userID")
-	log.Println("id from session before redir", userIDFromSession)
 
 	http.Redirect(w, r, baseURL(), http.StatusFound)
 }
