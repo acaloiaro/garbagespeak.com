@@ -4,7 +4,6 @@
 
 .framed {
   border: 1px solid $accent;
-  padding: 20px;
 
   *:first-child {
     margin-top: 0;
@@ -22,8 +21,6 @@
 .post {
   width: 100%;
   text-align: left;
-  margin: 20px auto;
-  padding: 20px 0;
 
   &:not(:last-of-type) {
     border-bottom: 1px solid $border-color;

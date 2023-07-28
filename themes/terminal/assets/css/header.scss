@@ -31,4 +31,14 @@
       text-decoration: none;
     }
   }
+
+  .alert {
+    height: 35px;
+    background-color: red;
+    border-radius: 5px;
+    padding-left: 10px;
+    padding-right: 10px;
+    opacity: 0;
+    transition: opacity 5s ease-out;
+  }
 }

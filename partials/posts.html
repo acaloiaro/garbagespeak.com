@@ -29,3 +29,7 @@
   </article>
   {{end}}
 </div>
+
+{{- with .Alert -}}
+  <div id="alert" remove-me="5s" class="alert">{{ . }}</div>
+{{ end }}

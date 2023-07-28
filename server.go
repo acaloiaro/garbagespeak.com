@@ -161,6 +161,7 @@ func main() {
 	// Add any number of handlers for custom endpoints here
 	r.Get("/garbage_bin", garbageBin)
 	r.Route("/users", func(r chi.Router) {
+		r.Get("/create", newAccount)
 		r.Post("/create", createAccount)
 		r.Get("/email_verification/{uev_id}", emailVerification)
 	})
@@ -169,6 +170,22 @@ func main() {
 	if err := http.ListenAndServe("0.0.0.0:1314", sessions.LoadAndSave(r)); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// newAccount serves the new account form
+func newAccount(w http.ResponseWriter, r *http.Request) {
+	var buff = bytes.NewBufferString("")
+	tmpl := template.Must(template.ParseFiles("partials/users/create.html"))
+	err := tmpl.Execute(buff, map[string]any{})
+	if err != nil {
+		ise(err, w)
+		return
+	}
+
+	w.Header().Add("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	w.Write(buff.Bytes())
+
 }
 
 // emailVerification takes a UserEmailVerification ID, and if it exists, verifies the associated User account by
@@ -284,6 +301,16 @@ func createAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var buff = bytes.NewBufferString("")
+	tmpl := template.Must(template.ParseFiles("partials/users/created.html"))
+	err = tmpl.Execute(buff, map[string]any{"Email": email})
+	if err != nil {
+		ise(err, w)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(buff.Bytes())
 }
 
 // garbageBin returns the latest garbage
@@ -293,8 +320,6 @@ func garbageBin(w http.ResponseWriter, r *http.Request) {
 		name = "World"
 	}
 
-	tmpl := template.Must(template.ParseFiles("partials/posts.html"))
-	var buff = bytes.NewBufferString("")
 	ctx := context.Background()
 	posts := []*Garbage{}
 	err := pgxscan.Select(ctx, db, &posts, `SELECT id,owner_id,title, content, metadata, created_at FROM garbages`)
@@ -302,16 +327,15 @@ func garbageBin(w http.ResponseWriter, r *http.Request) {
 		log.Println("error fetching garbage", err)
 		return
 	}
+
+	var buff = bytes.NewBufferString("")
+	tmpl := template.Must(template.ParseFiles("partials/posts.html"))
 	err = tmpl.Execute(buff, map[string]any{"Posts": posts})
 	if err != nil {
 		ise(err, w)
 		return
 	}
 
-	userIDFromSession := sessions.GetString(r.Context(), "userID")
-	log.Println("id from session after redir", userIDFromSession)
-
-	log.Println("foobar key contains", sessions.GetString(r.Context(), "foobar"))
 	w.WriteHeader(http.StatusOK)
 	w.Write(buff.Bytes())
 }
