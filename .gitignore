@@ -1,3 +1,4 @@
+static/
 .env
 .hugo_build.lock
 build
@@ -7,4 +8,4 @@ themes/ananke
 bin/build
 bin/develop
 resources/_gen/
-static/htmx.js
+

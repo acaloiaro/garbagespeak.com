@@ -113,11 +113,11 @@ func init() {
 	sessionStore = pgxstore.New(db)
 
 	sessions.Cookie.Name = "session_id"
-	//sessions.Cookie.Domain = siteDomain()
-	//sessions.Cookie.HttpOnly = true
-	//sessions.Cookie.Persist = true
+	sessions.Cookie.Domain = siteDomain()
+	sessions.Cookie.HttpOnly = true
+	sessions.Cookie.Persist = true
 	sessions.Cookie.SameSite = http.SameSiteNoneMode
-	//sessions.Cookie.Secure = true
+	sessions.Cookie.Secure = true
 	sessions.Store = sessionStore
 
 	ctx := context.Background()
@@ -144,7 +144,7 @@ func main() {
 	defer NQ.Shutdown(context.Background())
 
 	r := chi.NewRouter()
-	//r.Use(sessions.LoadAndSave)
+	r.Use(sessions.LoadAndSave)
 	r.Use(middleware.Logger)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -153,8 +153,8 @@ func main() {
 		AllowCredentials: true,
 		AllowedOrigins:   []string{"http://localhost:1313", fmt.Sprintf("https://%s", os.Getenv("SITE_DOMAIN"))},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Cookie", "Authorization", "Content-Type", "X-CSRF-Token", "hx-target", "hx-current-url", "hx-request"},
-		ExposedHeaders:   []string{"Link", "HX-Location"},
+		AllowedHeaders:   []string{"Accept", "Cookie", "Authorization", "Content-Type", "X-CSRF-Token", "hx-target", "hx-current-url", "hx-request", "hx-trigger", "hx-trigger-name"},
+		ExposedHeaders:   []string{"Link", "HX-Location", "Vary", "Access-Control-Allow-Origin"},
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	}))
 
@@ -170,7 +170,7 @@ func main() {
 	})
 
 	fmt.Printf("Starting API server on port 1314\n")
-	if err := http.ListenAndServe("0.0.0.0:1314", sessions.LoadAndSave(r)); err != nil {
+	if err := http.ListenAndServe("0.0.0.0:1314", r); err != nil {
 		log.Fatal(err)
 	}
 }
