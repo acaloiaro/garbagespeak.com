@@ -12,6 +12,7 @@
             <li class="menu__trigger">{{ $.Site.Params.MenuMore }}&nbsp;▾</li>
             <li>
               <ul class="menu__dropdown">
+                <div hx-get="{{ .Site.Params.apiBaseUrl }}/nav/user_items" hx-trigger="load" hx-swap="outerHTML">
                 {{ range last (sub (len $.Site.Menus.main) $.Site.Params.showMenuItems) $.Site.Menus.main }}
                   {{ if not .HasChildren }}
                     <li><a href="{{ .URL }}" {{ if .Params.NewTab -}} target="_blank" {{- end }}>{{ .Name }}</a></li>
@@ -30,6 +31,5 @@
       {{ end }}
     {{ end }}
 
-    <div hx-get="{{ .Site.Params.apiBaseUrl }}/nav/user_items" hx-trigger="load" hx-swap="outerHTML">
   </ul>
 </nav>

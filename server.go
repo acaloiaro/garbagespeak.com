@@ -153,8 +153,8 @@ func main() {
 		AllowCredentials: true,
 		AllowedOrigins:   []string{"http://localhost:1313", fmt.Sprintf("https://%s", os.Getenv("SITE_DOMAIN"))},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "hx-target", "hx-current-url", "hx-request"},
-		ExposedHeaders:   []string{"Link"},
+		AllowedHeaders:   []string{"Accept", "Cookie", "Authorization", "Content-Type", "X-CSRF-Token", "hx-target", "hx-current-url", "hx-request"},
+		ExposedHeaders:   []string{"Link", "HX-Location"},
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	}))
 
@@ -162,8 +162,10 @@ func main() {
 	r.Get("/garbage_bin", garbageBin)
 	r.Get("/nav/user_items", navUserItems)
 	r.Route("/users", func(r chi.Router) {
-		r.Get("/create", newAccount)
+		r.Get("/create", newAccountHandler)
+		r.Post("/login", loginHandler)
 		r.Post("/create", createAccount)
+		r.Get("/logout", logoutHandler)
 		r.Get("/email_verification/{uev_id}", emailVerification)
 	})
 
@@ -171,6 +173,57 @@ func main() {
 	if err := http.ListenAndServe("0.0.0.0:1314", sessions.LoadAndSave(r)); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// loginHandler renders the login page
+
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		ise(err, w)
+		return
+	}
+
+	username := r.PostForm.Get("username")
+	if len(username) == 0 {
+		w.WriteHeader(400)
+		return
+	}
+
+	password := r.PostForm.Get("password")
+	if len(password) < 8 {
+		w.WriteHeader(400)
+		return
+	}
+
+	var userID string
+	var storedPasswordHash string
+	err := db.QueryRow(r.Context(), "SELECT id,password FROM users WHERE username = $1", username).Scan(&userID, &storedPasswordHash)
+	if err != nil {
+		log.Fatalf("can't verify email address: %v", err)
+	}
+
+	log.Println("stored password", storedPasswordHash)
+
+	if err = bcrypt.CompareHashAndPassword([]byte(storedPasswordHash), []byte(password)); err == nil {
+		err = sessions.RenewToken(r.Context())
+		if err != nil {
+			ise(err, w)
+			return
+		}
+
+		sessions.Put(r.Context(), "userID", userID)
+		w.Header().Add("hx-location", baseURL())
+
+		return
+	}
+
+	log.Println("Passwords don't match")
+}
+
+// logoutHandler handles users logout requests
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
+	sessions.Clear(r.Context())
+	http.Redirect(w, r, baseURL(), http.StatusFound)
 }
 
 // navUserItems returns a nav items depending on whether the user is logged in
@@ -186,7 +239,7 @@ func navUserItems(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var buff = bytes.NewBufferString("")
-	err := tmpl.Execute(buff, map[string]any{})
+	err := tmpl.Execute(buff, map[string]any{"ApiURL": apiURL()})
 	if err != nil {
 		ise(err, w)
 		return
@@ -197,8 +250,8 @@ func navUserItems(w http.ResponseWriter, r *http.Request) {
 	w.Write(buff.Bytes())
 }
 
-// newAccount serves the new account form
-func newAccount(w http.ResponseWriter, r *http.Request) {
+// newAccountHandler serves the new account form
+func newAccountHandler(w http.ResponseWriter, r *http.Request) {
 	var buff = bytes.NewBufferString("")
 	tmpl := template.Must(template.ParseFiles("partials/users/create.html"))
 	err := tmpl.Execute(buff, map[string]any{})
@@ -239,9 +292,9 @@ func emailVerification(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("User ID:", userID)
 	// create the user's session
 	sessions.Put(r.Context(), "userID", userID)
+
 	tx.Commit(r.Context())
 
 	http.Redirect(w, r, baseURL(), http.StatusFound)
@@ -249,7 +302,6 @@ func emailVerification(w http.ResponseWriter, r *http.Request) {
 
 // createAccount creates new accounts
 func createAccount(w http.ResponseWriter, r *http.Request) {
-	// The name is not in the query param, let's see if it was submitted as a form
 	if err := r.ParseForm(); err != nil {
 		ise(err, w)
 		return

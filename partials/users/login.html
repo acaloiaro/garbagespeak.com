@@ -1,0 +1,30 @@
+<style>
+  .auth-wrapper{
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .auth-wrapper .sign-form{
+    max-width: 350px;
+    width: 100%;
+    padding: 0 20px;
+  }
+
+  .auth-wrapper h1{margin-bottom: 20px;}
+</style>
+
+<div class="auth-wrapper">
+  <div class="sign-form">
+    <h1>Sign In</h1>
+
+    <form action="/users/login" method="POST" hx-target=".auth-wrapper">
+      <input type="text" name="username">
+      <input type="text" name="password">
+
+      <button class="btn btn-success">Sign In!</button>
+
+    </form>
+  </div>
+</div>
