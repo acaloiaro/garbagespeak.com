@@ -205,8 +205,18 @@ func main() {
 		})
 	})
 
-	fmt.Printf("Starting API server on port 1314\n")
-	if err := http.ListenAndServe("0.0.0.0:1314", r); err != nil {
+	// this environment variable is present in production
+	// if the name of the port in job.nomad.hcl changes, this port
+	// name will need to change as well
+	port := os.Getenv("NOMAD_HOST_PORT_garbage_speak")
+	if port == "" {
+		port = "1314"
+	}
+
+	addr := fmt.Sprintf("%s:%s", "0.0.0.0", port)
+
+	fmt.Println("Starting API server on", addr)
+	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Fatal(err)
 	}
 }
