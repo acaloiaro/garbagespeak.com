@@ -2,7 +2,7 @@
  {{ $apiBaseURL := .ApiBaseUrl }}
  {{range .Posts}}
   <article class="post on-list">
-    <h1 class="post-title"><a href={{ .Url }}>{{ .Title }}</a></h1>
+    <h1 class="post-title"><a href={{ .Url }}>{{ .Title }} {{if .Url}}(link){{end}}</a></h1>
     <div class="post-meta">
       {{- with .Username -}}
       <span>Submitter:&nbsp;{{ . }}</span>

@@ -4,5 +4,5 @@
       {{ .Content }}
     </div>
   {{ end }}
-  <div hx-get="{{ .Site.Params.apiBaseUrl }}/garbage_bin" hx-trigger="load"></div>
+  <div hx-get="{{ .Site.Params.apiBaseUrl }}/garbage/list" hx-trigger="load"></div>
 {{ end }}

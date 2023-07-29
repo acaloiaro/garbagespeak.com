@@ -161,17 +161,17 @@ func main() {
 	}))
 
 	// Add any number of handlers for custom endpoints here
-	r.Get("/garbage_bin", garbageBin)
 	r.Get("/nav/user_items", navUserItems)
 	r.Route("/users", func(r chi.Router) {
 		r.Post("/new_user_validation", newUserValidationHandler)
-		r.Get("/create", newAccountHandler)
+		r.Get("/create", creatAccountPageHandler)
 		r.Post("/login", loginHandler)
-		r.Post("/create", createAccount)
+		r.Post("/create", createAccountHandler)
 		r.Get("/logout", logoutHandler)
 		r.Get("/email_verification/{uev_id}", emailVerification)
 	})
 	r.Route("/garbage", func(r chi.Router) {
+		r.Get("/list", listGarbageHandler)
 		r.Post("/new", createGarbageHandler)
 		r.Get("/{garbage_id}/edit", editGarbageHandler)
 		r.Put("/{garbage_id}", editGarbageUpdateHandler)
@@ -235,7 +235,7 @@ func editGarbageUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	//return
 	//}
 
-	w.Header().Add("hx-location", baseURL())
+	w.Header().Add("hx-location", appURL())
 }
 
 func editGarbageHandler(w http.ResponseWriter, r *http.Request) {
@@ -355,7 +355,7 @@ func newUserValidationHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(buff.Bytes())
 }
 
-// loginHandler renders the login page
+// loginHandler handles login requests and performs validation
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		ise(err, w)
@@ -363,26 +363,12 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	username := r.PostForm.Get("username")
-	if len(username) == 0 {
-		w.WriteHeader(400)
-		return
-	}
-
 	password := r.PostForm.Get("password")
-	if len(password) < 8 {
-		w.WriteHeader(400)
-		return
-	}
 
 	var userID string
 	var storedPasswordHash string
-	err := db.QueryRow(r.Context(), "SELECT id,password FROM users WHERE username = $1", username).Scan(&userID, &storedPasswordHash)
-	if err != nil {
-		log.Fatalf("can't verify email address: %v", err)
-	}
-
-	log.Println("stored password", storedPasswordHash)
-
+	db.QueryRow(r.Context(), "SELECT id,password FROM users WHERE username = $1", username).Scan(&userID, &storedPasswordHash)
+	var err error
 	if err = bcrypt.CompareHashAndPassword([]byte(storedPasswordHash), []byte(password)); err == nil {
 		err = sessions.RenewToken(r.Context())
 		if err != nil {
@@ -391,18 +377,34 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		sessions.Put(r.Context(), "userID", userID)
-		w.Header().Add("hx-location", baseURL())
+		w.Header().Add("hx-location", appURL())
 
 		return
 	}
 
-	log.Println("Passwords don't match")
+	tmpl := template.Must(template.ParseFiles("partials/users/login_validation.html"))
+
+	var buff = bytes.NewBufferString("")
+	err = tmpl.Execute(buff, map[string]any{
+		"ApiBaseURL": apiURL(),
+		"LoginError": "Incorrect username or password",
+		"Username":   username,
+		"Password":   password,
+	})
+	if err != nil {
+		ise(err, w)
+		return
+	}
+
+	w.Header().Add("Content-Type", "text/html")
+	w.WriteHeader(200)
+	w.Write(buff.Bytes())
 }
 
 // logoutHandler handles users logout requests
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	sessions.Destroy(r.Context())
-	http.Redirect(w, r, baseURL(), http.StatusFound)
+	http.Redirect(w, r, appURL(), http.StatusFound)
 }
 
 // navUserItems returns a nav items depending on whether the user is logged in
@@ -428,8 +430,8 @@ func navUserItems(w http.ResponseWriter, r *http.Request) {
 	w.Write(buff.Bytes())
 }
 
-// newAccountHandler serves the new account form
-func newAccountHandler(w http.ResponseWriter, r *http.Request) {
+// creatAccountPageHandler serves the new account form
+func creatAccountPageHandler(w http.ResponseWriter, r *http.Request) {
 	var buff = bytes.NewBufferString("")
 	tmpl := template.Must(template.ParseFiles("partials/users/create.html"))
 	err := tmpl.Execute(buff, map[string]any{})
@@ -475,10 +477,15 @@ func emailVerification(w http.ResponseWriter, r *http.Request) {
 
 	tx.Commit(r.Context())
 
-	http.Redirect(w, r, baseURL(), http.StatusFound)
+	http.Redirect(w, r, appURL(), http.StatusFound)
 }
 
 func createGarbageHandler(w http.ResponseWriter, r *http.Request) {
+	if !isLoggedIn(r) {
+		w.Header().Add("hx-location", fmt.Sprintf("%s/users/login", appURL()))
+		return
+	}
+
 	userID := sessions.GetString(r.Context(), "userID")
 	if userID == "" {
 		ise(errors.New("not logged in"), w)
@@ -523,11 +530,11 @@ func createGarbageHandler(w http.ResponseWriter, r *http.Request) {
 	//return
 	//}
 
-	w.Header().Add("hx-location", baseURL())
+	w.Header().Add("hx-location", appURL())
 }
 
-// createAccount creates new accounts
-func createAccount(w http.ResponseWriter, r *http.Request) {
+// createAccountHandler creates new accounts
+func createAccountHandler(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		ise(err, w)
 		return
@@ -612,8 +619,8 @@ func createAccount(w http.ResponseWriter, r *http.Request) {
 	w.Write(buff.Bytes())
 }
 
-// garbageBin returns the latest garbage
-func garbageBin(w http.ResponseWriter, r *http.Request) {
+// listGarbageHandler returns the latest garbage
+func listGarbageHandler(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get("name")
 	if name == "null" || name == "" {
 		name = "World"
@@ -755,8 +762,8 @@ func env() string {
 	return "development"
 }
 
-// baseURL returns the site's base URL, e.g. http://localhost:1313 in development, https://<SITE_DOMAIN> in production
-func baseURL() string {
+// appURL returns the site's base URL, e.g. http://localhost:1313 in development, https://<SITE_DOMAIN> in production
+func appURL() string {
 	if env() == "development" && siteDomain() == "" {
 		addr := os.Getenv("HOSTNAME")
 		if addr == "" {

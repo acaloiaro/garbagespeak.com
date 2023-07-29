@@ -1,0 +1,23 @@
+<div class="auth-wrapper">
+  <div class="auth-form">
+    <form hx-post="{{ .ApiBaseURL }}/users/login">
+
+      <div hx-target="this" hx-swap="innerHTML">
+        <label for="username">Username</label>
+        <input id="username" type="text" name="username" placeholder="your username" value="{{ .Username }}">
+      </div>
+
+      <label for="password">Password</label>
+      <input id="password" type="password" name="password" placeholder="your password" value="{{ .Password }}">
+      {{ with .LoginError }}
+        <div class="error-message">{{ . }}</div>
+      {{ end }}
+
+      <br>
+      <br>
+      <button>Log In</button>
+    </form>
+  </div>
+</div>
+
+
