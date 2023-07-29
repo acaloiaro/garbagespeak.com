@@ -21,6 +21,9 @@ jobs:
         with:
           hugo-version: '0.115.4'
           extended: true
+      - name: Fetch dependencies
+        run: |
+          ./bin/fetch-deps.sh
       - name: Hugo Build
         run: hugo --minify
       - name: Garbagespeak Build
