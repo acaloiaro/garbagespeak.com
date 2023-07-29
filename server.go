@@ -173,12 +173,121 @@ func main() {
 	})
 	r.Route("/garbage", func(r chi.Router) {
 		r.Post("/new", createGarbageHandler)
+		r.Get("/{garbage_id}/edit", editGarbageHandler)
+		r.Put("/{garbage_id}", editGarbageUpdateHandler)
 	})
 
 	fmt.Printf("Starting API server on port 1314\n")
 	if err := http.ListenAndServe("0.0.0.0:1314", r); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func editGarbageUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	garbageID := chi.URLParam(r, "garbage_id")
+	userID := sessions.GetString(r.Context(), "userID")
+
+	if userID == "" {
+		ise(errors.New("not logged in"), w)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		ise(err, w)
+		return
+	}
+
+	url := r.PostForm.Get("url")
+	title := r.PostForm.Get("title")
+	garbage := r.PostForm.Get("garbage")
+	// TODO this is an arbitrary length that will likely need to change
+	if len(garbage) == 10 {
+		w.WriteHeader(400)
+		return
+	}
+
+	metadata := map[string]any{}
+	tags := r.Form["tags"]
+	if len(tags) > 0 {
+		metadata["tags"] = tags
+	}
+
+	ctx := context.Background()
+	_, err := db.Exec(ctx,
+		"UPDATE garbages SET (title, content, url, metadata) = ($1, $2, $3, $4) WHERE id = $5",
+		title,
+		garbage,
+		url,
+		metadata,
+		garbageID)
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	log.Println("HERE")
+	//var buff = bytes.NewBufferString("")
+	//tmpl := template.Must(template.ParseFiles("partials/users/created.html"))
+	//err = tmpl.Execute(buff, map[string]any{"Email": email})
+	//if err != nil {
+	//ise(err, w)
+	//return
+	//}
+
+	w.Header().Add("hx-location", baseURL())
+}
+
+func editGarbageHandler(w http.ResponseWriter, r *http.Request) {
+	garbageID := chi.URLParam(r, "garbage_id")
+	userID := sessions.GetString(r.Context(), "userID")
+	if userID == "" {
+		return // TODO render an  error
+	}
+
+	garbage := Garbage{}
+	ctx := context.Background()
+	err := pgxscan.Get(
+		ctx,
+		db,
+		&garbage,
+		`SELECT id, title, content, metadata, url FROM garbages WHERE id = $1`, garbageID)
+	if err != nil {
+		ise(err, w)
+		return
+	}
+
+	availableTags := []string{
+		"Nouned verb",
+		"Verbed noun",
+		"Nouned adjective",
+		"Novel garbage",
+	}
+	selectedTags := map[string]bool{}
+	if tags, ok := garbage.Metadata["tags"].([]interface{}); ok {
+		for _, tag := range tags {
+			selectedTags[tag.(string)] = true
+		}
+	}
+
+	tmplVars := map[string]any{
+		"ApiBaseUrl":    apiURL(),
+		"Garbage":       garbage,
+		"SelectedTags":  selectedTags,
+		"AvailableTags": availableTags,
+	}
+	tmpl := template.Must(template.ParseFiles("partials/garbage/edit.html"))
+
+	var buff = bytes.NewBufferString("")
+	err = tmpl.Execute(buff, tmplVars)
+	if err != nil {
+		ise(err, w)
+		return
+	}
+
+	w.Header().Add("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	w.Write(buff.Bytes())
 }
 
 // newUserValidationHandler checks whether a username is available during account creation
@@ -292,7 +401,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 // logoutHandler handles users logout requests
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
-	sessions.Clear(r.Context())
+	sessions.Destroy(r.Context())
 	http.Redirect(w, r, baseURL(), http.StatusFound)
 }
 
@@ -301,7 +410,6 @@ func navUserItems(w http.ResponseWriter, r *http.Request) {
 	userID := sessions.GetString(r.Context(), "userID")
 	var tmpl *template.Template
 
-	log.Println("user id:", userID)
 	if userID == "" {
 		tmpl = template.Must(template.ParseFiles("partials/nav/non_user_nav_items.html"))
 	} else {
@@ -371,7 +479,6 @@ func emailVerification(w http.ResponseWriter, r *http.Request) {
 }
 
 func createGarbageHandler(w http.ResponseWriter, r *http.Request) {
-
 	userID := sessions.GetString(r.Context(), "userID")
 	if userID == "" {
 		ise(errors.New("not logged in"), w)
@@ -392,9 +499,11 @@ func createGarbageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	url := r.PostForm.Get("url")
+
+	metadata := map[string]any{}
 	tags := r.Form["tags"]
-	metadata := map[string]any{
-		"tags": tags,
+	if len(tags) > 0 {
+		metadata["tags"] = tags
 	}
 
 	ctx := context.Background()
@@ -526,7 +635,11 @@ func garbageBin(w http.ResponseWriter, r *http.Request) {
 
 	var buff = bytes.NewBufferString("")
 	tmpl := template.Must(template.ParseFiles("partials/posts.html"))
-	err = tmpl.Execute(buff, map[string]any{"Posts": posts})
+	err = tmpl.Execute(buff, map[string]any{
+		"Posts":      posts,
+		"ApiBaseUrl": apiURL(),
+		"LoggedIn":   isLoggedIn(r),
+	})
 	if err != nil {
 		ise(err, w)
 		return
@@ -682,4 +795,9 @@ func apiURL() string {
 func ise(err error, w http.ResponseWriter) {
 	fmt.Fprintf(w, "error: %v", err)
 	w.WriteHeader(http.StatusInternalServerError)
+}
+
+func isLoggedIn(r *http.Request) bool {
+	var _, err = r.Cookie("session_id")
+	return err == nil
 }

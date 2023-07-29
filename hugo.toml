@@ -105,7 +105,7 @@ enableInlineShortcodes = true
       [[languages.en.menu.main]]
         identifier = "submit"
         name = "Submit"
-        url = "/posts/new"
+        url = "/garbage/new"
 
 [module]
   # In case you would like to make changes to the theme and keep it locally in you repository,

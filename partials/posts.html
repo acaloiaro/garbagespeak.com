@@ -1,14 +1,14 @@
 <div class="posts">
+ {{ $apiBaseURL := .ApiBaseUrl }}
  {{range .Posts}}
   <article class="post on-list">
-    <h1 class="post-title">{{ .Title }}</h1>
+    <h1 class="post-title"><a href={{ .Url }}>{{ .Title }}</a></h1>
     <div class="post-meta">
       {{- with .Username -}}
-      <span>Submitter:&nbsp;<span class="post-author">{{ . }}</span></span>
+      <span>Submitter:&nbsp;{{ . }}</span>
       {{- end -}}
-
       {{ if .Metadata.tags }}
-      <span class="">
+      <span>
         {{ range .Metadata.tags }}
         {{- . -}},
         {{ end }}
@@ -20,6 +20,13 @@
           {{- .Format "2006-01-02" -}}
         </time>
       {{- end -}}
+
+      {{ if $.LoggedIn }}
+      <a href="#"
+        hx-get="{{ $apiBaseURL }}/garbage/{{ .ID }}/edit"
+        hx-target="#content"
+        hx-swap="outerHTML">Edit</a>
+      {{ end }}
     </div>
 
 
