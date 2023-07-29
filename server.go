@@ -7,6 +7,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
@@ -69,10 +70,11 @@ type UserEmailVerification struct {
 	UpdatedAt time.Time
 }
 
-// embed all migrations with the binary
-//
 //go:embed migrations/*.sql
 var migrations embed.FS
+
+//go:embed all:public
+var content embed.FS
 
 var db *pgxpool.Pool
 var sessions *scs.SessionManager
@@ -116,7 +118,6 @@ func init() {
 	sessionStore = pgxstore.New(db)
 
 	sessions.Cookie.Name = "session_id"
-	sessions.Cookie.Domain = siteDomain()
 	sessions.Cookie.HttpOnly = true
 	sessions.Cookie.Persist = true
 	sessions.Cookie.SameSite = http.SameSiteNoneMode
@@ -141,10 +142,33 @@ func init() {
 	}
 }
 
+// FileServer conveniently sets up a http.FileServer handler to serve
+// static files from a http.FileSystem.
+func FileServer(r chi.Router, path string, root http.FileSystem) {
+	if strings.ContainsAny(path, "{}*") {
+		panic("FileServer does not permit any URL parameters.")
+	}
+
+	if path != "/" && path[len(path)-1] != '/' {
+		r.Get(path, http.RedirectHandler(path+"/", http.StatusFound).ServeHTTP)
+		path += "/"
+	}
+	path += "*"
+
+	r.Get(path, func(w http.ResponseWriter, r *http.Request) {
+		rctx := chi.RouteContext(r.Context())
+		pathPrefix := strings.TrimSuffix(rctx.RoutePattern(), "/*")
+		fs := http.StripPrefix(pathPrefix, http.FileServer(root))
+		fs.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	defer db.Close()
 	defer sessionStore.StopCleanup()
 	defer NQ.Shutdown(context.Background())
+
+	serverRoot, _ := fs.Sub(content, "public")
 
 	r := chi.NewRouter()
 	r.Use(sessions.LoadAndSave)
@@ -162,20 +186,23 @@ func main() {
 	}))
 
 	// Add any number of handlers for custom endpoints here
-	r.Get("/nav/user_items", navUserItems)
-	r.Route("/users", func(r chi.Router) {
-		r.Post("/new_user_validation", newUserValidationHandler)
-		r.Get("/create", creatAccountPageHandler)
-		r.Post("/login", loginHandler)
-		r.Post("/create", createAccountHandler)
-		r.Get("/logout", logoutHandler)
-		r.Get("/email_verification/{uev_id}", emailVerification)
-	})
-	r.Route("/garbage", func(r chi.Router) {
-		r.Get("/list", listGarbageHandler)
-		r.Post("/new", createGarbageHandler)
-		r.Get("/{garbage_id}/edit", editGarbageHandler)
-		r.Put("/{garbage_id}", editGarbageUpdateHandler)
+	FileServer(r, "/", http.FS(serverRoot))
+	r.Route("/api", func(api chi.Router) {
+		api.Get("/nav/user_items", navUserItems)
+		api.Route("/users", func(users chi.Router) {
+			users.Post("/new_user_validation", newUserValidationHandler)
+			users.Get("/create", creatAccountPageHandler)
+			users.Post("/login", loginHandler)
+			users.Post("/create", createAccountHandler)
+			users.Get("/logout", logoutHandler)
+			users.Get("/email_verification/{uev_id}", emailVerification)
+		})
+		api.Route("/garbage", func(garbage chi.Router) {
+			garbage.Get("/list", listGarbageHandler)
+			garbage.Post("/new", createGarbageHandler)
+			garbage.Get("/{garbage_id}/edit", editGarbageHandler)
+			garbage.Put("/{garbage_id}", editGarbageUpdateHandler)
+		})
 	})
 
 	fmt.Printf("Starting API server on port 1314\n")
@@ -223,18 +250,9 @@ func editGarbageUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		garbageID)
 
 	if err != nil {
-		log.Println(err)
+		ise(err, w)
 		return
 	}
-
-	log.Println("HERE")
-	//var buff = bytes.NewBufferString("")
-	//tmpl := template.Must(template.ParseFiles("partials/users/created.html"))
-	//err = tmpl.Execute(buff, map[string]any{"Email": email})
-	//if err != nil {
-	//ise(err, w)
-	//return
-	//}
 
 	w.Header().Add("hx-location", appURL())
 }
@@ -255,7 +273,6 @@ func editGarbageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println(garbage.OwnerID)
 	if userID == "" || userID != garbage.OwnerID.String() {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
@@ -315,8 +332,6 @@ func newUserValidationHandler(w http.ResponseWriter, r *http.Request) {
 	tmplVars["Password"] = password
 	tmplVars["PasswordConfirmation"] = passwordConfirmation
 
-	log.Println("vars", tmplVars)
-
 	if len(username) == 0 {
 		tmplVars["UsernameError"] = "Please choose a username"
 		errCnt += 1
@@ -353,7 +368,6 @@ func newUserValidationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("respones", buff.String())
 	w.Header().Add("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
 	w.Write(buff.Bytes())
@@ -413,13 +427,12 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 
 // navUserItems returns a nav items depending on whether the user is logged in
 func navUserItems(w http.ResponseWriter, r *http.Request) {
-	userID := sessions.GetString(r.Context(), "userID")
 	var tmpl *template.Template
 
-	if userID == "" {
-		tmpl = template.Must(template.ParseFiles("partials/nav/non_user_nav_items.html"))
-	} else {
+	if isLoggedIn(r) {
 		tmpl = template.Must(template.ParseFiles("partials/nav/user_nav_items.html"))
+	} else {
+		tmpl = template.Must(template.ParseFiles("partials/nav/non_user_nav_items.html"))
 	}
 
 	var buff = bytes.NewBufferString("")
@@ -526,14 +539,6 @@ func createGarbageHandler(w http.ResponseWriter, r *http.Request) {
 		metadata,
 		userID)
 
-	//var buff = bytes.NewBufferString("")
-	//tmpl := template.Must(template.ParseFiles("partials/users/created.html"))
-	//err = tmpl.Execute(buff, map[string]any{"Email": email})
-	//if err != nil {
-	//ise(err, w)
-	//return
-	//}
-
 	w.Header().Add("hx-location", appURL())
 }
 
@@ -558,15 +563,14 @@ func createAccountHandler(w http.ResponseWriter, r *http.Request) {
 
 	email := r.PostForm.Get("email")
 	if !strings.Contains(email, "@") {
-		log.Println("invalid email:", email)
 		w.WriteHeader(400)
 		return
 	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Println("error hashing password", err)
 		ise(err, w)
+		return
 	}
 
 	ctx := context.Background()
@@ -640,9 +644,10 @@ func listGarbageHandler(w http.ResponseWriter, r *http.Request) {
 		&posts,
 		`SELECT garbages.id, owner_id, username, title, content, metadata, url, garbages.created_at
 			FROM garbages
-			JOIN users ON garbages.owner_id = users.id`)
+			JOIN users ON garbages.owner_id = users.id
+			ORDER BY created_at DESC`)
 	if err != nil {
-		log.Println("error fetching garbage", err)
+		ise(err, w)
 		return
 	}
 
@@ -749,16 +754,6 @@ func welcomeEmailHandler(ctx context.Context) (err error) {
 	return
 }
 
-// siteDomain returns the server's domain
-func siteDomain() string {
-	d := os.Getenv("SITE_DOMAIN")
-	if d != "" {
-		return d
-	}
-
-	return ""
-}
-
 // env returns the server's environment name, e.g. "development"
 func env() string {
 	e := os.Getenv("GO_ENV")
@@ -771,39 +766,30 @@ func env() string {
 
 // appURL returns the site's base URL, e.g. http://localhost:1313 in development, https://<SITE_DOMAIN> in production
 func appURL() string {
-	if env() == "development" && siteDomain() == "" {
-		addr := os.Getenv("HOSTNAME")
-		if addr == "" {
-			addr = "localhost"
-		}
-		return fmt.Sprintf("http://%s:1313", addr)
-	} else {
-		addr := os.Getenv("SITE_DOMAIN")
-		if addr == "" {
-			addr = siteDomain()
-		}
-
-		return fmt.Sprintf("https://%s", addr)
+	if env() == "development" {
+		return fmt.Sprintf("http://%s", os.Getenv("SITE_HOST"))
 	}
+
+	addr := os.Getenv("SITE_DOMAIN")
+	if addr == "" {
+		log.Fatalf("SITE_DOMAIN is not set")
+	}
+
+	return fmt.Sprintf("https://%s", addr)
 }
 
 // apiURL returns the server's base URL, e.g. http://localhost:1314 in development, https://<API_HOST> in production
 func apiURL() string {
-	if env() == "development" && siteDomain() == "" {
-		addr := os.Getenv("HOSTNAME")
-		if addr == "" {
-			addr = "localhost"
-		}
-		return fmt.Sprintf("http://%s:1314", addr)
-	} else {
-		addr := os.Getenv("API_HOST")
-		if addr == "" {
-			addr = siteDomain()
-		}
-
-		return fmt.Sprintf("https://%s", addr)
+	if env() == "development" {
+		return fmt.Sprintf("http://%s/api", os.Getenv("API_HOST"))
 	}
 
+	addr := os.Getenv("SITE_DOMAIN")
+	if addr == "" {
+		log.Fatalf("SITE_DOMAIN is not set")
+	}
+
+	return fmt.Sprintf("https://%s/api", addr)
 }
 
 func ise(err error, w http.ResponseWriter) {
