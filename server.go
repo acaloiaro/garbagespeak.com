@@ -40,6 +40,7 @@ import (
 // Garbage represents 'garbage' records from the database
 type Garbage struct {
 	ID        uuid.UUID
+	OwnerID   uuid.UUID
 	Username  string
 	Title     string
 	Content   string
@@ -241,9 +242,6 @@ func editGarbageUpdateHandler(w http.ResponseWriter, r *http.Request) {
 func editGarbageHandler(w http.ResponseWriter, r *http.Request) {
 	garbageID := chi.URLParam(r, "garbage_id")
 	userID := sessions.GetString(r.Context(), "userID")
-	if userID == "" {
-		return // TODO render an  error
-	}
 
 	garbage := Garbage{}
 	ctx := context.Background()
@@ -251,9 +249,15 @@ func editGarbageHandler(w http.ResponseWriter, r *http.Request) {
 		ctx,
 		db,
 		&garbage,
-		`SELECT id, title, content, metadata, url FROM garbages WHERE id = $1`, garbageID)
+		`SELECT id, owner_id, title, content, metadata, url FROM garbages WHERE id = $1 AND owner_id = $2`, garbageID, userID)
 	if err != nil {
-		ise(err, w)
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	log.Println(garbage.OwnerID)
+	if userID == "" || userID != garbage.OwnerID.String() {
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
@@ -621,6 +625,8 @@ func createAccountHandler(w http.ResponseWriter, r *http.Request) {
 
 // listGarbageHandler returns the latest garbage
 func listGarbageHandler(w http.ResponseWriter, r *http.Request) {
+
+	userID := sessions.GetString(r.Context(), "userID")
 	name := r.URL.Query().Get("name")
 	if name == "null" || name == "" {
 		name = "World"
@@ -632,7 +638,7 @@ func listGarbageHandler(w http.ResponseWriter, r *http.Request) {
 		ctx,
 		db,
 		&posts,
-		`SELECT garbages.id, username, title, content, metadata, url, garbages.created_at
+		`SELECT garbages.id, owner_id, username, title, content, metadata, url, garbages.created_at
 			FROM garbages
 			JOIN users ON garbages.owner_id = users.id`)
 	if err != nil {
@@ -646,6 +652,7 @@ func listGarbageHandler(w http.ResponseWriter, r *http.Request) {
 		"Posts":      posts,
 		"ApiBaseUrl": apiURL(),
 		"LoggedIn":   isLoggedIn(r),
+		"UserID":     userID,
 	})
 	if err != nil {
 		ise(err, w)
