@@ -1,0 +1,60 @@
+<label for="username">Username</label>
+<input
+  id="username"
+  type="text"
+  name="username"
+  placeholder="desired username"
+  value="{{ .Username }}"
+  hx-post="{{ .ApiBaseUrl }}/users/new_user_validation"
+  hx-indicator="#username-ind">
+<img id="username-ind" src="/img/bars.svg" class="htmx-indicator"/>
+{{ with .UsernameError }}
+  <div class="error-message">{{ . }}</div>
+{{ end }}
+
+<label for="email">Email (we do not spam or sell information)</label>
+<input
+  id="email"
+  type="email"
+  name="email"
+  placeholder="your email address"
+  value="{{ .Email }}"
+  hx-post="{{ .ApiBaseUrl }}/users/new_user_validation"
+  hx-indicator="#email-ind">
+<img id="email-ind" src="/img/bars.svg" class="htmx-indicator"/>
+{{ with .EmailError }}
+  <div class="error-message">{{ . }}</div>
+{{ end }}
+
+<label for="password">Password</label>
+<input
+  id="password"
+  type="password"
+  name="password"
+  placeholder="desired password"
+  value="{{ .Password }}"
+  hx-post="{{ .ApiBaseUrl }}/users/new_user_validation"
+  hx-indicator="#password-ind">
+<img id="password-ind" src="/img/bars.svg" class="htmx-indicator"/>
+{{ with .PasswordError }}
+  <div class="error-message">{{ . }}</div>
+{{ end }}
+
+<label for="password_confirmation">Password Confirmation</label>
+<input
+  id="password_confirmation"
+  type="password"
+  name="password_confirmation"
+  placeholder="desired password"
+  value="{{ .PasswordConfirmation }}"
+  hx-post="{{ .ApiBaseUrl }}/users/new_user_validation"
+  hx-indicator="#password-conf-ind">
+<img id="password-conf-ind" src="/img/bars.svg" class="htmx-indicator"/>
+{{ with .PasswordConfirmationError }}
+  <div class="error-message">{{ . }}</div>
+{{ end }}
+
+<br>
+<br>
+<button {{ if gt .ErrorCount 0 }}disabled=true{{end}}>Create Account</button>
+

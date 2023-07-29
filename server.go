@@ -162,6 +162,7 @@ func main() {
 	r.Get("/garbage_bin", garbageBin)
 	r.Get("/nav/user_items", navUserItems)
 	r.Route("/users", func(r chi.Router) {
+		r.Post("/new_user_validation", newUserValidationHandler)
 		r.Get("/create", newAccountHandler)
 		r.Post("/login", loginHandler)
 		r.Post("/create", createAccount)
@@ -175,8 +176,72 @@ func main() {
 	}
 }
 
-// loginHandler renders the login page
+// newUserValidationHandler checks whether a username is available during account creation
+func newUserValidationHandler(w http.ResponseWriter, r *http.Request) {
+	tmplVars := map[string]any{"ApiBaseUrl": apiURL()}
+	tmpl := template.Must(template.ParseFiles("partials/users/new_user_validation.html"))
+	errCnt := 0
 
+	if err := r.ParseForm(); err != nil {
+		ise(err, w)
+		return
+	}
+
+	username := r.PostForm.Get("username")
+	email := r.PostForm.Get("email")
+	password := r.PostForm.Get("password")
+	passwordConfirmation := r.PostForm.Get("password_confirmation")
+
+	tmplVars["Username"] = username
+	tmplVars["Email"] = email
+	tmplVars["Password"] = password
+	tmplVars["PasswordConfirmation"] = passwordConfirmation
+
+	log.Println("vars", tmplVars)
+
+	if len(username) == 0 {
+		tmplVars["UsernameError"] = "Please choose a username"
+		errCnt += 1
+	} else if len(username) > 0 {
+		var userID string
+		db.QueryRow(r.Context(), "SELECT id FROM users WHERE username = $1", username).Scan(&userID)
+		if userID != "" {
+			tmplVars["UsernameError"] = fmt.Sprintf("Username '%s' is unavailable. Choose a different username.", username)
+			errCnt += 1
+		}
+	}
+
+	if (len(email) > 0 && len(email) < 4) || (len(email) >= 4 && !strings.Contains(email, "@")) {
+		tmplVars["EmailError"] = "Please enter a valid email address."
+		errCnt += 1
+	}
+
+	if len(password) > 0 && len(password) < 8 {
+		tmplVars["PasswordError"] = "Please choose a password greater than 8 characters"
+		errCnt += 1
+	}
+
+	if len(password) > 0 && len(passwordConfirmation) > 0 && password != passwordConfirmation {
+		tmplVars["PasswordConfirmationError"] = "Passwords do not match"
+		errCnt += 1
+	}
+
+	tmplVars["ErrorCount"] = errCnt
+
+	var buff = bytes.NewBufferString("")
+	err := tmpl.Execute(buff, tmplVars)
+	if err != nil {
+		ise(err, w)
+		return
+	}
+
+	log.Println("respones", buff.String())
+	w.Header().Add("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	w.Write(buff.Bytes())
+}
+
+// loginHandler renders the login page
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		ise(err, w)

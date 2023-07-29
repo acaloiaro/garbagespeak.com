@@ -2,13 +2,13 @@ module github.com/acaloiaro/garbage_speak
 
 go 1.20
 
-replace github.com/acaloiaro/neoq v0.17.0 => /home/adriano/git/neoq
-
 require (
-	github.com/acaloiaro/neoq v0.17.0
+	github.com/acaloiaro/neoq v0.18.0
 	github.com/alexedwards/scs/pgxstore v0.0.0-20230327161757-10d4299e3b24
 	github.com/alexedwards/scs/v2 v2.5.1
 	github.com/georgysavva/scany/v2 v2.0.0
+	github.com/go-chi/chi/v5 v5.0.10
+	github.com/go-chi/cors v1.2.1
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/golang-migrate/migrate/v4 v4.16.2
 	github.com/jackc/pgx-gofrs-uuid v0.0.0-20230224015001-1d428863c2e2
@@ -17,8 +17,6 @@ require (
 )
 
 require (
-	github.com/go-chi/chi/v5 v5.0.10 // indirect
-	github.com/go-chi/cors v1.2.1 // indirect
 	github.com/gofrs/uuid/v5 v5.0.0 // indirect
 	github.com/guregu/null v4.0.0+incompatible // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect

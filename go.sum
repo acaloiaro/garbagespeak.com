@@ -1,6 +1,8 @@
 github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 h1:L/gRVlceqvL25UVaW/CKtUDjefjrs0SPonmDGUVOYP0=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/Microsoft/go-winio v0.6.1 h1:9/kr64B9VUZrLm5YYwbGtUJnMgqWVOdUAXu6Migciow=
+github.com/acaloiaro/neoq v0.18.0 h1:WKTDNEL/sH5hlwd/7Kgbqb4kKdvNVdzNNjfKRtt3v5k=
+github.com/acaloiaro/neoq v0.18.0/go.mod h1:uLI2JfC2V9p+H5lx5s0SUsjxIYLm8JDhi6VkyURMvLM=
 github.com/alexedwards/scs/pgxstore v0.0.0-20230327161757-10d4299e3b24 h1:l8+ZTNz/s7fbpTz/oeUmXCL39Rn49SRaXnj2/LZzCos=
 github.com/alexedwards/scs/pgxstore v0.0.0-20230327161757-10d4299e3b24/go.mod h1:KTB1slYgIU/BBa4MWA5IdET31OsbPQBM7dqDw5klIt4=
 github.com/alexedwards/scs/v2 v2.5.1 h1:EhAz3Kb3OSQzD8T+Ub23fKsiuvE0GzbF5Lgn0uTwM3Y=

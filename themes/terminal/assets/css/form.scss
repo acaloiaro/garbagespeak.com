@@ -42,7 +42,7 @@ input {
   }
 }
 
-.auth-wrapper{
+.auth-wrapper {
   height: 100%;
   display: flex;
   align-items: center;
@@ -50,9 +50,7 @@ input {
 }
 
 .auth-wrapper .auth-form {
-  max-width: 450px;
   width: 100%;
-  padding: 0 20px;
 }
 
 .auth-wrapper h1{margin-bottom: 20px;}
@@ -62,3 +60,17 @@ label {
   margin: 0.5rem 0;
 }
 
+.error-message {
+  color: red;
+}
+
+.htmx-indicator {
+  display: inline-block;
+}
+
+button:disabled,
+button[disabled]{
+  border: 1px solid #999999;
+  background-color: #cccccc;
+  color: #666666;
+}
