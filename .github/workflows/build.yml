@@ -1,0 +1,65 @@
+name: goreleaser
+
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.20"
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v2
+        with:
+          hugo-version: '0.115.4'
+          extended: true
+      - name: Hugo Build
+        run: hugo --minify
+      - name: Garbagespeak Build
+        run: |
+          mkdir out
+          go build -o "out/garbage-speak-${GITHUB_SHA}" server.go
+      - name: S3 Sync
+        uses: jakejarvis/s3-sync-action@v0.5.1
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_SECRET_ACCESS_KEY }}
+          AWS_S3_BUCKET: "garbage-speak-application"
+          AWS_REGION: "us-east-005"
+          AWS_S3_ENDPOINT: "https://s3.us-east-005.backblazeb2.com "
+          SOURCE_DIR: "out"
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tailscale Login
+        uses: tailscale/github-action@main
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          version: 1.32.1
+        env:
+          ADDITIONAL_ARGS: "--accept-dns"
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Deploy nomad job
+        run: |
+          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+          sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+          sudo apt-get update && sudo apt-get install nomad
+          tailscale status
+          nomad job run -var version=${GITHUB_SHA} -var b2_access_key_id=${B2_ACCESS_KEY_ID} -var b2_secret_access_key=${B2_SECRET_ACCESS_KEY} job.nomad.hcl
+        env:
+          NOMAD_ADDR: http://cluster-0:4646
+          NOMAD_TOKEN: ${{ secrets.NOMAD_TOKEN }}
+          B2_ACCESS_KEY_ID: ${{ secrets.B2_ACCESS_KEY_ID }}
+          B2_SECRET_ACCESS_KEY: ${{ secrets.B2_SECRET_ACCESS_KEY }}
