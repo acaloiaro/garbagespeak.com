@@ -30,7 +30,7 @@ enableInlineShortcodes = true
   themeColor = "blue"
 
   # if you set this to 0, only submenu trigger will be visible
-  showMenuItems = 3
+  showMenuItems = 5
 
   # show selector to switch language
   showLanguageSelector = false
@@ -86,14 +86,10 @@ enableInlineShortcodes = true
 
     [languages.en.menu]
       [[languages.en.menu.main]]
-        identifier = "about"
-        name = "What is Garbage Speak?"
-        url = "/about/"
-
-      [[languages.en.menu.main]]
         identifier = "garbage"
         name = "Latest Garbage"
         url = "/"
+        weight = 1
 
       [[languages.en.menu.main]]
         identifier = "dictionary"
@@ -104,6 +100,12 @@ enableInlineShortcodes = true
         identifier = "faq"
         name = "FAQ"
         url = "/faq"
+        weight = 2
+
+      [[languages.en.menu.main]]
+        identifier = "submit"
+        name = "Submit"
+        url = "/posts/new"
 
 [module]
   # In case you would like to make changes to the theme and keep it locally in you repository,

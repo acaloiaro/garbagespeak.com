@@ -51,7 +51,12 @@
       white-space: nowrap;
 
       &:not(:last-of-type) {
-        margin-right: 20px;
+        margin-right: 0.5rem;
+      }
+
+      &:not(:last-of-type):after {
+        margin-left: 0.5rem;
+        content: "|";
       }
     }
 

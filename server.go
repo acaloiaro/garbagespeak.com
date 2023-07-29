@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"embed"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -39,10 +40,11 @@ import (
 // Garbage represents 'garbage' records from the database
 type Garbage struct {
 	ID        uuid.UUID
-	OwnerID   *uuid.UUID
+	Username  string
 	Title     string
 	Content   string
 	Metadata  map[string]any
+	Url       string
 	CreatedAt time.Time
 }
 
@@ -168,6 +170,9 @@ func main() {
 		r.Post("/create", createAccount)
 		r.Get("/logout", logoutHandler)
 		r.Get("/email_verification/{uev_id}", emailVerification)
+	})
+	r.Route("/garbage", func(r chi.Router) {
+		r.Post("/new", createGarbageHandler)
 	})
 
 	fmt.Printf("Starting API server on port 1314\n")
@@ -365,6 +370,53 @@ func emailVerification(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, baseURL(), http.StatusFound)
 }
 
+func createGarbageHandler(w http.ResponseWriter, r *http.Request) {
+
+	userID := sessions.GetString(r.Context(), "userID")
+	if userID == "" {
+		ise(errors.New("not logged in"), w)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		ise(err, w)
+		return
+	}
+
+	title := r.PostForm.Get("title")
+	garbage := r.PostForm.Get("garbage")
+	// TODO this is an arbitrary length that will likely need to change
+	if len(garbage) == 10 {
+		w.WriteHeader(400)
+		return
+	}
+
+	url := r.PostForm.Get("url")
+	tags := r.Form["tags"]
+	metadata := map[string]any{
+		"tags": tags,
+	}
+
+	ctx := context.Background()
+	db.QueryRow(ctx,
+		"INSERT INTO garbages(title, content, url, metadata, owner_id) VALUES ($1, $2, $3, $4, $5)",
+		title,
+		garbage,
+		url,
+		metadata,
+		userID)
+
+	//var buff = bytes.NewBufferString("")
+	//tmpl := template.Must(template.ParseFiles("partials/users/created.html"))
+	//err = tmpl.Execute(buff, map[string]any{"Email": email})
+	//if err != nil {
+	//ise(err, w)
+	//return
+	//}
+
+	w.Header().Add("hx-location", baseURL())
+}
+
 // createAccount creates new accounts
 func createAccount(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
@@ -460,7 +512,13 @@ func garbageBin(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 	posts := []*Garbage{}
-	err := pgxscan.Select(ctx, db, &posts, `SELECT id,owner_id,title, content, metadata, created_at FROM garbages`)
+	err := pgxscan.Select(
+		ctx,
+		db,
+		&posts,
+		`SELECT garbages.id, username, title, content, metadata, url, garbages.created_at
+			FROM garbages
+			JOIN users ON garbages.owner_id = users.id`)
 	if err != nil {
 		log.Println("error fetching garbage", err)
 		return

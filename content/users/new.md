@@ -48,7 +48,7 @@ title: Create Account
 
         <br>
         <br>
-        <button disabled=true>Create Account</button>
+        <button disabled>Create Account</button>
       </div>
     </form>
   </div>

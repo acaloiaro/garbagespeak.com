@@ -1,6 +1,48 @@
 ---
 title: "FAQ"
+toc: true
 ---
+
+## What is garbage speak?
+
+Garbage speak is a community of thought leaders solving the world's language asks.
+
+In this community we share out and collect all the key learnings of our ever-evolving language.
+
+We are the value drivers, and we are here to futureproof the English language against stagnation.
+
+We verb nouns and noun adjectives.
+
+**We speak like our boss' bosses.**
+
+## Can you show me the science?
+
+Garbage speak is more feeling than science. While it often adheres to common formulas: nouning verbs, verbing nouns, and nouning adjectives. But truly novel garbage is a complex animal that can't be pinned down.
+
+With that complexity in mind, the thought leaders have synced and we're happy to share out these garbage speak examples with accompanying analysis to help aspiring thought leaders navigate the garbage space.
+
+---
+
+**Garbage speak**: Is there a solve for this?
+
+**Analysis**: The speaker has nouned the verb _solve_. They are asking if there is a solution.
+
+---
+
+**Garbage speak**
+Can we circle back to the ask here?
+
+**Analysis**
+_Circle back_ is a garbage speak mainstay meaning "return" or "get back on topic". The verb _ask_ has been nouned.
+
+---
+
+**Garbage speak**
+We'd like to be intentional about the space we give our employees.
+
+**Analysis**
+This is complex. _Intentional_ is being used not to communicate intention, but to communicate that the speaker is hip to therapy speak -- a sub genre of garbage speak. _Space_ is used in the same way, but it's serving a dual role. Its second role is that of a deeply ambiguous word that fills literal space in a sentence, making the speaker sound more like their boss. Is it physical space, emotional space (therapy speak), or some amalgamation of both (safe space)? It doesn't matter -- anything can be space in garbage speak.
+
 
 ## What are the rules for thought leaders posting new garbage speak?
 
@@ -12,7 +54,7 @@ If the garbage speak is _not_ proprietary, e.g. an internal company Slack conver
 
 ## Do I need to sign up to anything to become a thought leader?
 
-Currently, no. But we may require registration in the future to combat spam / ensure that repeat embellishment offenders don't abuse the system.
+Yes. We require registration to combat spam / ensure that repeat embellishment offenders don't abuse the system.
 
 ## What's the go-to-market for future features?
 
