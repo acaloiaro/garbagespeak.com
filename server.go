@@ -669,8 +669,8 @@ func listGarbageHandler(w http.ResponseWriter, r *http.Request) {
 // sendWelcomeEmail sends an email to recipient containing a special URL that only that can know, for the purpose of
 // email address verification
 func sendWelcomeEmail(recipient, verificationURL, siteName string) error {
-	smtp_host := os.Getenv("SMTP_HOST")
-	log.Println("SMTP host:", smtp_host)
+	smtpHost := os.Getenv("SMTP_HOST")
+	log.Println("SMTP host:", smtpHost)
 	to := []string{recipient}
 	msg := []byte(fmt.Sprintf("To: %s\r\n", recipient) +
 		fmt.Sprintf("From: %s", os.Getenv("SMTP_FROM_ADDRESS")) + "\r\n" +
@@ -678,28 +678,24 @@ func sendWelcomeEmail(recipient, verificationURL, siteName string) error {
 		fmt.Sprintf("Verify your email address by visiting: %s\r\n", verificationURL))
 
 	log.Println("to:", to, "msg:", msg)
-	host, _, _ := net.SplitHostPort(smtp_host)
+	host, _, _ := net.SplitHostPort(smtpHost)
 
 	auth := smtp.PlainAuth("", os.Getenv("SMTP_USERNAME"), os.Getenv("SMTP_PASSWORD"), host)
+
+	// Here is the key, you need to call tls.Dial instead of smtp.Dial
+	// for smtp servers running on 465 that require an ssl connection
+	// from the very beginning (no starttls)
+	c, err := smtp.Dial(smtpHost)
+	if err != nil {
+		log.Panic(err)
+	}
 
 	// TLS config
 	tlsconfig := &tls.Config{
 		InsecureSkipVerify: true,
 		ServerName:         host,
 	}
-
-	// Here is the key, you need to call tls.Dial instead of smtp.Dial
-	// for smtp servers running on 465 that require an ssl connection
-	// from the very beginning (no starttls)
-	conn, err := tls.Dial("tcp", smtp_host, tlsconfig)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	c, err := smtp.NewClient(conn, host)
-	if err != nil {
-		log.Panic(err)
-	}
+	c.StartTLS(tlsconfig)
 
 	// Auth
 	if err = c.Auth(auth); err != nil {
