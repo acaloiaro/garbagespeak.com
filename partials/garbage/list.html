@@ -14,6 +14,7 @@
 
       <a href="#"
         hx-get="{{ $.ApiBaseUrl }}/garbage/{{ .ID }}"
+        hx-push-url="{{ $.ApiBaseUrl }}/garbage/{{ .ID }}"
         hx-target="#content">Link</a>
 
       {{ if eq .OwnerID.String $.UserID }}

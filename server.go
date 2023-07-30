@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"embed"
@@ -16,6 +17,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/acaloiaro/garbage_speak/html_parser"
 	"github.com/acaloiaro/neoq"
 	"github.com/acaloiaro/neoq/backends/postgres"
 	"github.com/acaloiaro/neoq/handler"
@@ -70,13 +72,13 @@ type UserEmailVerification struct {
 }
 
 //go:embed migrations/*.sql
-var migrations embed.FS
+var migrationsFS embed.FS
 
 //go:embed all:public
-var content embed.FS
+var publicFS embed.FS
 
 //go:embed all:partials
-var partials embed.FS
+var partialsFS embed.FS
 
 var db *pgxpool.Pool
 var sessions *scs.SessionManager
@@ -85,7 +87,7 @@ var NQ types.Backend
 
 // run migrations, acquire a database connection pool, and create the session store
 func init() {
-	d, err := iofs.New(migrations, "migrations")
+	d, err := iofs.New(migrationsFS, "migrations")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -170,7 +172,7 @@ func main() {
 	defer sessionStore.StopCleanup()
 	defer NQ.Shutdown(context.Background())
 
-	serverRoot, _ := fs.Sub(content, "public")
+	serverRoot, _ := fs.Sub(publicFS, "public")
 
 	r := chi.NewRouter()
 	r.Use(sessions.LoadAndSave)
@@ -311,7 +313,7 @@ func editGarbageHandler(w http.ResponseWriter, r *http.Request) {
 		"SelectedTags":  selectedTags,
 		"AvailableTags": availableTags,
 	}
-	tmpl := template.Must(template.ParseFS(partials, "partials/garbage/edit.html"))
+	tmpl := template.Must(template.ParseFS(partialsFS, "partials/garbage/edit.html"))
 	err = tmpl.ExecuteTemplate(w, "edit.html", tmplVars)
 	if err != nil {
 		ise(err, w)
@@ -325,7 +327,7 @@ func editGarbageHandler(w http.ResponseWriter, r *http.Request) {
 // newUserValidationHandler checks whether a username is available during account creation
 func newUserValidationHandler(w http.ResponseWriter, r *http.Request) {
 	tmplVars := map[string]any{"ApiBaseUrl": apiURL()}
-	tmpl := template.Must(template.ParseFS(partials, "partials/users/new_user_validation.html"))
+	tmpl := template.Must(template.ParseFS(partialsFS, "partials/users/new_user_validation.html"))
 
 	errCnt := 0
 
@@ -410,7 +412,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl := template.Must(template.ParseFS(partials, "partials/users/login.html"))
+	tmpl := template.Must(template.ParseFS(partialsFS, "partials/users/login.html"))
 	err = tmpl.ExecuteTemplate(w, "login.html", map[string]any{
 		"ApiBaseURL": apiURL(),
 		"LoginError": "Incorrect username or password",
@@ -437,7 +439,7 @@ func navUserItems(w http.ResponseWriter, r *http.Request) {
 	var tmpl *template.Template
 
 	var err error
-	tmpl = template.Must(template.ParseFS(partials, "partials/nav/*.html"))
+	tmpl = template.Must(template.ParseFS(partialsFS, "partials/nav/*.html"))
 	if isLoggedIn(r) {
 		err = tmpl.ExecuteTemplate(w, "user_nav_items.html", map[string]any{"ApiURL": apiURL()})
 	} else {
@@ -455,7 +457,7 @@ func navUserItems(w http.ResponseWriter, r *http.Request) {
 
 // creatAccountPageHandler serves the new account form
 func creatAccountPageHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.ParseFS(partials, "partials/users/*"))
+	tmpl := template.Must(template.ParseFS(partialsFS, "partials/users/*"))
 	err := tmpl.ExecuteTemplate(w, "create.html", map[string]any{})
 	if err != nil {
 		ise(err, w)
@@ -619,7 +621,7 @@ func createAccountHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl := template.Must(template.ParseFS(partials, "partials/users/*"))
+	tmpl := template.Must(template.ParseFS(partialsFS, "partials/users/*"))
 	err = tmpl.ExecuteTemplate(w, "created.html", map[string]any{"Email": email})
 	if err != nil {
 		ise(err, w)
@@ -647,7 +649,7 @@ func listGarbageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl := template.Must(template.ParseFS(partials, "partials/garbage/list.html"))
+	tmpl := template.Must(template.ParseFS(partialsFS, "partials/garbage/list.html"))
 	err = tmpl.ExecuteTemplate(w, "list.html", map[string]any{
 		"Posts":      garbage,
 		"ApiBaseUrl": apiURL(),
@@ -664,6 +666,7 @@ func listGarbageHandler(w http.ResponseWriter, r *http.Request) {
 
 // showGarbageHandler returns the latest garbage
 func showGarbageHandler(w http.ResponseWriter, r *http.Request) {
+	isPartialRequest := r.Header.Get("hx-request") != ""
 	garbageID := chi.URLParam(r, "garbage_id")
 	userID := sessions.GetString(r.Context(), "userID")
 	ctx := context.Background()
@@ -682,8 +685,9 @@ func showGarbageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl := template.Must(template.ParseFS(partials, "partials/garbage/show.html"))
-	err = tmpl.ExecuteTemplate(w, "show.html", map[string]any{
+	var buff = bytes.NewBufferString("")
+	tmpl := template.Must(template.ParseFS(partialsFS, "partials/garbage/show.html"))
+	err = tmpl.ExecuteTemplate(buff, "show.html", map[string]any{
 		"Garbage":    garbage,
 		"ApiBaseUrl": apiURL(),
 		"LoggedIn":   isLoggedIn(r),
@@ -692,6 +696,15 @@ func showGarbageHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		ise(err, w)
 		return
+	}
+
+	if isPartialRequest {
+		w.Write(buff.Bytes())
+	} else {
+		indexFile, _ := publicFS.Open("public/index.html")
+		content := html_parser.ParseAndSplice(indexFile, "content", buff.String())
+		log.Println(content)
+		w.Write([]byte(content))
 	}
 
 	w.WriteHeader(http.StatusOK)

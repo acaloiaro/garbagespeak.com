@@ -14,6 +14,7 @@ require (
 	github.com/jackc/pgx-gofrs-uuid v0.0.0-20230224015001-1d428863c2e2
 	github.com/jackc/pgx/v5 v5.4.2
 	golang.org/x/crypto v0.9.0
+	golang.org/x/net v0.10.0
 )
 
 require (
