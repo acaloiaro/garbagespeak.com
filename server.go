@@ -204,6 +204,7 @@ func main() {
 			garbage.Post("/new", createGarbageHandler)
 			garbage.Get("/{garbage_id}/edit", editGarbageHandler)
 			garbage.Put("/{garbage_id}", editGarbageUpdateHandler)
+			garbage.Get("/{garbage_id}", showGarbageHandler)
 		})
 	})
 
@@ -310,7 +311,7 @@ func editGarbageHandler(w http.ResponseWriter, r *http.Request) {
 		"SelectedTags":  selectedTags,
 		"AvailableTags": availableTags,
 	}
-	tmpl := template.Must(template.ParseFS(partials, "partials/garbage/*"))
+	tmpl := template.Must(template.ParseFS(partials, "partials/garbage/edit.html"))
 	err = tmpl.ExecuteTemplate(w, "edit.html", tmplVars)
 	if err != nil {
 		ise(err, w)
@@ -324,7 +325,7 @@ func editGarbageHandler(w http.ResponseWriter, r *http.Request) {
 // newUserValidationHandler checks whether a username is available during account creation
 func newUserValidationHandler(w http.ResponseWriter, r *http.Request) {
 	tmplVars := map[string]any{"ApiBaseUrl": apiURL()}
-	tmpl := template.Must(template.ParseFS(partials, "partials/users/*"))
+	tmpl := template.Must(template.ParseFS(partials, "partials/users/new_user_validation.html"))
 
 	errCnt := 0
 
@@ -409,7 +410,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl := template.Must(template.ParseFS(partials, "partials/users/*"))
+	tmpl := template.Must(template.ParseFS(partials, "partials/users/login.html"))
 	err = tmpl.ExecuteTemplate(w, "login.html", map[string]any{
 		"ApiBaseURL": apiURL(),
 		"LoginError": "Incorrect username or password",
@@ -436,7 +437,7 @@ func navUserItems(w http.ResponseWriter, r *http.Request) {
 	var tmpl *template.Template
 
 	var err error
-	tmpl = template.Must(template.ParseFS(partials, "partials/nav/*"))
+	tmpl = template.Must(template.ParseFS(partials, "partials/nav/*.html"))
 	if isLoggedIn(r) {
 		err = tmpl.ExecuteTemplate(w, "user_nav_items.html", map[string]any{"ApiURL": apiURL()})
 	} else {
@@ -630,19 +631,13 @@ func createAccountHandler(w http.ResponseWriter, r *http.Request) {
 
 // listGarbageHandler returns the latest garbage
 func listGarbageHandler(w http.ResponseWriter, r *http.Request) {
-
 	userID := sessions.GetString(r.Context(), "userID")
-	name := r.URL.Query().Get("name")
-	if name == "null" || name == "" {
-		name = "World"
-	}
-
 	ctx := context.Background()
-	posts := []*Garbage{}
+	garbage := []*Garbage{}
 	err := pgxscan.Select(
 		ctx,
 		db,
-		&posts,
+		&garbage,
 		`SELECT garbages.id, owner_id, username, title, content, metadata, url, garbages.created_at
 			FROM garbages
 			JOIN users ON garbages.owner_id = users.id
@@ -652,9 +647,44 @@ func listGarbageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl := template.Must(template.ParseFS(partials, "partials/posts.html"))
-	err = tmpl.ExecuteTemplate(w, "posts.html", map[string]any{
-		"Posts":      posts,
+	tmpl := template.Must(template.ParseFS(partials, "partials/garbage/list.html"))
+	err = tmpl.ExecuteTemplate(w, "list.html", map[string]any{
+		"Posts":      garbage,
+		"ApiBaseUrl": apiURL(),
+		"LoggedIn":   isLoggedIn(r),
+		"UserID":     userID,
+	})
+	if err != nil {
+		ise(err, w)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// showGarbageHandler returns the latest garbage
+func showGarbageHandler(w http.ResponseWriter, r *http.Request) {
+	garbageID := chi.URLParam(r, "garbage_id")
+	userID := sessions.GetString(r.Context(), "userID")
+	ctx := context.Background()
+	garbage := Garbage{}
+	err := pgxscan.Get(
+		ctx,
+		db,
+		&garbage,
+		`SELECT garbages.id, owner_id, username, title, content, metadata, url, garbages.created_at
+			FROM garbages
+			JOIN users ON garbages.owner_id = users.id
+			WHERE garbages.id = $1
+			ORDER BY created_at DESC`, garbageID)
+	if err != nil {
+		ise(err, w)
+		return
+	}
+
+	tmpl := template.Must(template.ParseFS(partials, "partials/garbage/show.html"))
+	err = tmpl.ExecuteTemplate(w, "show.html", map[string]any{
+		"Garbage":    garbage,
 		"ApiBaseUrl": apiURL(),
 		"LoggedIn":   isLoggedIn(r),
 		"UserID":     userID,

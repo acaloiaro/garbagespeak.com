@@ -1,6 +1,6 @@
 <div class="posts">
  {{ $apiBaseURL := .ApiBaseUrl }}
- {{range .Posts}}
+ {{ with .Garbage }}
   <article class="post on-list">
     <h1 class="post-title">{{ .Title }}</h1>
     <div class="post-meta">
@@ -20,7 +20,6 @@
         hx-swap="outerHTML">Edit</a>
       {{ end }}
     </div>
-
 
     <div class="post-content">
       {{ .Content }}
