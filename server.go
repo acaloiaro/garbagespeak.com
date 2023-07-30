@@ -670,7 +670,7 @@ func listGarbageHandler(w http.ResponseWriter, r *http.Request) {
 // email address verification
 func sendWelcomeEmail(recipient, verificationURL, siteName string) error {
 	smtpHost := os.Getenv("SMTP_HOST")
-	from := os.Getenv("SMTP_FROM_ADDRESS")
+	from := fmt.Sprintf("noreply@%s", os.Getenv("SITE_DOMAIN"))
 	to := []string{recipient}
 
 	log.Println("SMTP host:", smtpHost, "from:", from)
