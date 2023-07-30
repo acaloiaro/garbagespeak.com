@@ -74,7 +74,7 @@
   }
 
   &-content {
-    margin-top: 30px;
+    margin-top: 0px;
   }
 
   &-cover {
@@ -130,4 +130,35 @@ h1:hover a, h2:hover a, h3:hover a, h4:hover a {
 
 .footnotes {
   color: transparentize($color, .5);
+}
+
+blockquote {
+    font-family: Georgia, serif;
+    position: relative;
+    margin: 0.5em;
+    padding: 0.5em 0em 0em 0em;
+    color: transparentize($color, .25);
+}
+blockquote:before {
+    font-family: Georgia, serif;
+    position: relative;
+    left: -0.25em;
+    font-size: 3em;
+    line-height: 1;
+    content: "\201C";
+}
+blockquote:after {
+    font-family: Georgia, serif;
+    position: relative;
+    font-size: 3em;
+    line-height: 1;
+    right: -0.25em;
+    content: "\201D";
+}
+blockquote footer {
+    padding: 0 2em 0 0;
+    text-align:right;
+}
+blockquote cite:before {
+    content: "\2013";
 }
