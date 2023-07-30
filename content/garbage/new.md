@@ -41,6 +41,7 @@ title: New Garbage
           <option>Verbed noun</option>
           <option>Nouned adjective</option>
           <option>Novel garbage</option>
+          <option>Standard-issue garbage</option>
         </select>
         <br>
         <br>

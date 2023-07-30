@@ -295,6 +295,7 @@ func editGarbageHandler(w http.ResponseWriter, r *http.Request) {
 		"Verbed noun",
 		"Nouned adjective",
 		"Novel garbage",
+		"Standard-issue garbage",
 	}
 	selectedTags := map[string]bool{}
 	if tags, ok := garbage.Metadata["tags"].([]interface{}); ok {
