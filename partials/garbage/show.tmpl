@@ -1,0 +1,48 @@
+{{ with .Garbage }}
+<article class="post on-list">
+  <h1 class="post-title">
+  {{if .Url}}<a href={{ .Url }} target="_blank">{{.Title}} (link)</a>{{else}}{{.Title}}{{ end }}</h1>
+  <div class="post-meta">
+    {{- with .Username -}}
+    <span>Submitter:&nbsp;{{ . }}</span>
+    {{- end -}}
+    {{ if eq .OwnerID.String $.UserID }}
+    <a href="{{ $.ApiBaseUrl }}/garbage/{{ .ID }}/edit"
+      hx-get="{{ $.ApiBaseUrl }}/garbage/{{ .ID }}/edit"
+      hx-push-url="true"
+      hx-target="#content"
+      hx-swap="innerHTML">Edit</a>
+    {{ end }}
+    <a href="{{ $.ApiBaseUrl }}/garbage/{{ .ID }}"
+      hx-get="{{ $.ApiBaseUrl }}/garbage/{{ .ID }}"
+      hx-push-url="{{ $.ApiBaseUrl }}/garbage/{{ .ID }}"
+      hx-target="#content"
+      hx-swap="innerHTML">Permalink</a>
+
+    {{- with .CreatedAt -}}
+      <time class="post-date">
+        {{- .Format "2006-01-02" -}}
+      </time>
+    {{- end -}}
+  </div>
+  <div class="post-content">
+    <blockquote>{{ .Content }}</blockquote>
+  </div>
+
+  <br/>
+  <div class="post-meta">
+    {{ if .Metadata.tags }}
+    <span>tags</span>
+    <span>
+      {{ range .Metadata.tags }}
+      {{- . -}},
+      {{ end }}
+    </span>
+    {{ end }}
+  </div>
+</article>
+{{end}}
+
+{{- with .Alert -}}
+  <div id="alert" remove-me="5s" class="alert">{{ . }}</div>
+{{ end }}

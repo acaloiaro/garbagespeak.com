@@ -1,47 +1,7 @@
 <div class="posts">
  {{range .Posts}}
-  <article class="post on-list">
-    <h1 class="post-title">{{ .Title }}</h1>
-    <div class="post-meta">
-      {{- with .Username -}}
-      <span>Submitter:&nbsp;{{ . }}</span>
-      {{- end -}}
-      {{- with .CreatedAt -}}
-        <time class="post-date">
-          {{- .Format "2006-01-02" -}}
-        </time>
-      {{- end -}}
-
-      <a href="#"
-        hx-get="{{ $.ApiBaseUrl }}/garbage/{{ .ID }}"
-        hx-push-url="{{ $.ApiBaseUrl }}/garbage/{{ .ID }}"
-        hx-target="#content">Link</a>
-
-      {{ if eq .OwnerID.String $.UserID }}
-        <a href="#"
-          hx-get="{{ $.ApiBaseUrl }}/garbage/{{ .ID }}/edit"
-          hx-target="#content"
-          hx-swap="outerHTML">Edit</a>
-      {{ end }}
-    </div>
-
-    <div class="post-content">
-      <blockquote>{{ .Content }}</blockquote>
-    </div>
-
-    <br/>
-    <div class="post-meta">
-      {{ if .Metadata.tags }}
-      <span>tags</span>
-      <span>
-        {{ range .Metadata.tags }}
-        {{- . -}},
-        {{ end }}
-      </span>
-      {{ end }}
-    </div>
-  </article>
-  {{end}}
+   {{ template "show.tmpl" (PostWrapper . $.UserID $.ApiBaseUrl) }}
+ {{end}}
 </div>
 
 {{- with .Alert -}}
