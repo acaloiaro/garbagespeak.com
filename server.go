@@ -670,14 +670,17 @@ func listGarbageHandler(w http.ResponseWriter, r *http.Request) {
 // email address verification
 func sendWelcomeEmail(recipient, verificationURL, siteName string) error {
 	smtpHost := os.Getenv("SMTP_HOST")
-	log.Println("SMTP host:", smtpHost)
+	from := os.Getenv("SMTP_FROM_ADDRESS")
 	to := []string{recipient}
+
+	log.Println("SMTP host:", smtpHost, "from:", from)
+
 	msg := []byte(fmt.Sprintf("To: %s\r\n", recipient) +
-		fmt.Sprintf("From: %s", os.Getenv("SMTP_FROM_ADDRESS")) + "\r\n" +
+		fmt.Sprintf("From: %s", from) + "\r\n" +
 		fmt.Sprintf("Subject: Welcome to %s!\r\n", siteName) + "\r\n" +
 		fmt.Sprintf("Verify your email address by visiting: %s\r\n", verificationURL))
 
-	log.Println("to:", to, "msg:", msg)
+	log.Println("to:", to, "msg:", string(msg))
 	host, _, _ := net.SplitHostPort(smtpHost)
 
 	auth := smtp.PlainAuth("", os.Getenv("SMTP_USERNAME"), os.Getenv("SMTP_PASSWORD"), host)
@@ -703,7 +706,7 @@ func sendWelcomeEmail(recipient, verificationURL, siteName string) error {
 	}
 
 	// From
-	if err = c.Mail(os.Getenv("SMTP_FROM_ADDRESS")); err != nil {
+	if err = c.Mail(from); err != nil {
 		log.Panic(err)
 	}
 
