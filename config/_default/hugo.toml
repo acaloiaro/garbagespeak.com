@@ -1,5 +1,5 @@
 [Params]
-  apiBaseUrl = 'http://localhost:1314/api'
+  apiBaseUrl = 'http://localhost:1314'
 
 [module]
 [[module.mounts]]

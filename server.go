@@ -146,33 +146,13 @@ func init() {
 	}
 }
 
-// FileServer conveniently sets up a http.FileServer handler to serve
-// static files from a http.FileSystem.
-func FileServer(r chi.Router, path string, root http.FileSystem) {
-	if strings.ContainsAny(path, "{}*") {
-		panic("FileServer does not permit any URL parameters.")
-	}
-
-	if path != "/" && path[len(path)-1] != '/' {
-		r.Get(path, http.RedirectHandler(path+"/", http.StatusFound).ServeHTTP)
-		path += "/"
-	}
-	path += "*"
-
-	r.Get(path, func(w http.ResponseWriter, r *http.Request) {
-		rctx := chi.RouteContext(r.Context())
-		pathPrefix := strings.TrimSuffix(rctx.RoutePattern(), "/*")
-		fs := http.StripPrefix(pathPrefix, http.FileServer(root))
-		fs.ServeHTTP(w, r)
-	})
-}
-
 func main() {
 	defer db.Close()
 	defer sessionStore.StopCleanup()
 	defer NQ.Shutdown(context.Background())
 
 	serverRoot, _ := fs.Sub(publicFS, "public")
+	staticContentServer := http.FileServer(http.FS(serverRoot))
 
 	r := chi.NewRouter()
 	r.Use(sessions.LoadAndSave)
@@ -190,10 +170,15 @@ func main() {
 	}))
 
 	// Add any number of handlers for custom endpoints here
-	FileServer(r, "/", http.FS(serverRoot))
-	r.Route("/api", func(api chi.Router) {
-		api.Get("/nav/user_items", navUserItems)
-		api.Route("/users", func(users chi.Router) {
+	r.Route("/", func(r chi.Router) {
+		// any requests for which there are no defined chi routes are sent to the "file system"
+		// server, serving static Hugo content
+		r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+			staticContentServer.ServeHTTP(w, r)
+		})
+
+		r.Get("/nav/user_items", navUserItems)
+		r.Route("/users", func(users chi.Router) {
 			users.Post("/new_user_validation", newUserValidationHandler)
 			users.Get("/create", creatAccountPageHandler)
 			users.Post("/login", loginHandler)
@@ -201,7 +186,7 @@ func main() {
 			users.Get("/logout", logoutHandler)
 			users.Get("/email_verification/{uev_id}", emailVerification)
 		})
-		api.Route("/garbage", func(garbage chi.Router) {
+		r.Route("/garbage", func(garbage chi.Router) {
 			garbage.Get("/list", listGarbageHandler)
 			garbage.Post("/new", createGarbageHandler)
 			garbage.Get("/{garbage_id}/edit", editGarbageHandler)
@@ -822,7 +807,7 @@ func appURL() string {
 // apiURL returns the server's base URL, e.g. http://localhost:1314 in development, https://<API_HOST> in production
 func apiURL() string {
 	if env() == "development" {
-		return fmt.Sprintf("http://%s/api", os.Getenv("API_HOST"))
+		return fmt.Sprintf("http://%s", os.Getenv("API_HOST"))
 	}
 
 	addr := os.Getenv("SITE_DOMAIN")
@@ -830,7 +815,7 @@ func apiURL() string {
 		log.Fatalf("SITE_DOMAIN is not set")
 	}
 
-	return fmt.Sprintf("https://%s/api", addr)
+	return fmt.Sprintf("https://%s/", addr)
 }
 
 func ise(err error, w http.ResponseWriter) {
