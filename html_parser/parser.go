@@ -79,7 +79,6 @@ func ParseAndSplice(file io.Reader, id, htmlContent string) (content string) {
 		log.Fatal(err)
 	}
 
-	log.Println("HERE", htmlContent)
 	doc = htmlGetByID(doc, id)
 	if doc == nil {
 		return
