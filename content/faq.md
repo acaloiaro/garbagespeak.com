@@ -15,9 +15,11 @@ We verb nouns and noun adjectives.
 
 **We speak like our boss' bosses.**
 
-## Can you show me the science?
+## Can you provide examples of garbage speak one might see in the wild?
 
-Garbage speak is more feeling than science. While it often adheres to common formulas: nouning verbs, verbing nouns, and nouning adjectives. But truly novel garbage is a complex animal that can't be pinned down.
+Thanks for the ask.
+
+Garbage speak is more feeling than science. Garbage speak often adheres to common formulas: nouning verbs, verbing nouns, and nouning adjectives. But truly novel garbage is a complex animal that can't be pinned down.
 
 With that complexity in mind, the thought leaders have synced and we're happy to share out these garbage speak examples with accompanying analysis to help aspiring thought leaders navigate the garbage space.
 
