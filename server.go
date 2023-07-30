@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"embed"
@@ -75,6 +74,9 @@ var migrations embed.FS
 
 //go:embed all:public
 var content embed.FS
+
+//go:embed all:partials
+var partials embed.FS
 
 var db *pgxpool.Pool
 var sessions *scs.SessionManager
@@ -307,10 +309,8 @@ func editGarbageHandler(w http.ResponseWriter, r *http.Request) {
 		"SelectedTags":  selectedTags,
 		"AvailableTags": availableTags,
 	}
-	tmpl := template.Must(template.ParseFiles("partials/garbage/edit.html"))
-
-	var buff = bytes.NewBufferString("")
-	err = tmpl.Execute(buff, tmplVars)
+	tmpl := template.Must(template.ParseFS(partials, "partials/garbage/*"))
+	err = tmpl.ExecuteTemplate(w, "edit.html", tmplVars)
 	if err != nil {
 		ise(err, w)
 		return
@@ -318,13 +318,13 @@ func editGarbageHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
-	w.Write(buff.Bytes())
 }
 
 // newUserValidationHandler checks whether a username is available during account creation
 func newUserValidationHandler(w http.ResponseWriter, r *http.Request) {
 	tmplVars := map[string]any{"ApiBaseUrl": apiURL()}
-	tmpl := template.Must(template.ParseFiles("partials/users/new_user_validation.html"))
+	tmpl := template.Must(template.ParseFS(partials, "partials/users/*"))
+
 	errCnt := 0
 
 	if err := r.ParseForm(); err != nil {
@@ -371,8 +371,7 @@ func newUserValidationHandler(w http.ResponseWriter, r *http.Request) {
 
 	tmplVars["ErrorCount"] = errCnt
 
-	var buff = bytes.NewBufferString("")
-	err := tmpl.Execute(buff, tmplVars)
+	err := tmpl.ExecuteTemplate(w, "new_user_validation.html", tmplVars)
 	if err != nil {
 		ise(err, w)
 		return
@@ -380,7 +379,6 @@ func newUserValidationHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
-	w.Write(buff.Bytes())
 }
 
 // loginHandler handles login requests and performs validation
@@ -410,10 +408,8 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl := template.Must(template.ParseFiles("partials/users/login_validation.html"))
-
-	var buff = bytes.NewBufferString("")
-	err = tmpl.Execute(buff, map[string]any{
+	tmpl := template.Must(template.ParseFS(partials, "partials/users/*"))
+	err = tmpl.ExecuteTemplate(w, "login.html", map[string]any{
 		"ApiBaseURL": apiURL(),
 		"LoginError": "Incorrect username or password",
 		"Username":   username,
@@ -426,7 +422,6 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("Content-Type", "text/html")
 	w.WriteHeader(200)
-	w.Write(buff.Bytes())
 }
 
 // logoutHandler handles users logout requests
@@ -439,14 +434,14 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 func navUserItems(w http.ResponseWriter, r *http.Request) {
 	var tmpl *template.Template
 
+	var err error
+	tmpl = template.Must(template.ParseFS(partials, "partials/nav/*"))
 	if isLoggedIn(r) {
-		tmpl = template.Must(template.ParseFiles("partials/nav/user_nav_items.html"))
+		err = tmpl.ExecuteTemplate(w, "user_nav_items.html", map[string]any{"ApiURL": apiURL()})
 	} else {
-		tmpl = template.Must(template.ParseFiles("partials/nav/non_user_nav_items.html"))
+		err = tmpl.ExecuteTemplate(w, "non_user_nav_items.html", map[string]any{"ApiURL": apiURL()})
 	}
 
-	var buff = bytes.NewBufferString("")
-	err := tmpl.Execute(buff, map[string]any{"ApiURL": apiURL()})
 	if err != nil {
 		ise(err, w)
 		return
@@ -454,14 +449,12 @@ func navUserItems(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
-	w.Write(buff.Bytes())
 }
 
 // creatAccountPageHandler serves the new account form
 func creatAccountPageHandler(w http.ResponseWriter, r *http.Request) {
-	var buff = bytes.NewBufferString("")
-	tmpl := template.Must(template.ParseFiles("partials/users/create.html"))
-	err := tmpl.Execute(buff, map[string]any{})
+	tmpl := template.Must(template.ParseFS(partials, "partials/users/*"))
+	err := tmpl.ExecuteTemplate(w, "create.html", map[string]any{})
 	if err != nil {
 		ise(err, w)
 		return
@@ -469,7 +462,6 @@ func creatAccountPageHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
-	w.Write(buff.Bytes())
 }
 
 // emailVerification takes a UserEmailVerification ID, and if it exists, verifies the associated User account by
@@ -625,16 +617,14 @@ func createAccountHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var buff = bytes.NewBufferString("")
-	tmpl := template.Must(template.ParseFiles("partials/users/created.html"))
-	err = tmpl.Execute(buff, map[string]any{"Email": email})
+	tmpl := template.Must(template.ParseFS(partials, "partials/users/*"))
+	err = tmpl.ExecuteTemplate(w, "created.html", map[string]any{"Email": email})
 	if err != nil {
 		ise(err, w)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(buff.Bytes())
 }
 
 // listGarbageHandler returns the latest garbage
@@ -661,9 +651,8 @@ func listGarbageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var buff = bytes.NewBufferString("")
-	tmpl := template.Must(template.ParseFiles("partials/posts.html"))
-	err = tmpl.Execute(buff, map[string]any{
+	tmpl := template.Must(template.ParseFS(partials, "partials/posts.html"))
+	err = tmpl.ExecuteTemplate(w, "posts.html", map[string]any{
 		"Posts":      posts,
 		"ApiBaseUrl": apiURL(),
 		"LoggedIn":   isLoggedIn(r),
@@ -675,7 +664,6 @@ func listGarbageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(buff.Bytes())
 }
 
 // sendWelcomeEmail sends an email to recipient containing a special URL that only that can know, for the purpose of
