@@ -5,11 +5,9 @@ toc: true
 
 ## What is garbage speak?
 
-Garbage speak is a community of thought leaders solving the world's language asks.
+Garbage speak is a community of thought leaders sharing out the latest developments in human language.
 
-In this community we share out and collect all the key learnings of our ever-evolving language.
-
-We are the value drivers, and we are here to futureproof the English language against stagnation.
+We are the value drivers of our organizations, and we are here to futureproof language against stagnation.
 
 We verb nouns and noun adjectives.
 
@@ -52,7 +50,7 @@ You can post any garbage speak seen in the wild, so long as it is not embellishe
 
 Garbage speak suspected of embellishment will be removed.
 
-If the garbage speak is _not_ proprietary, e.g. an internal company Slack conversation, we encourage users to add URLs any content.
+If the garbage speak is _not_ proprietary, e.g. an internal company Slack conversation, we encourage users to add URLs to original sources.
 
 If a post is perceived as hostile or harassment, it will be removed.
 
