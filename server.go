@@ -815,7 +815,7 @@ func apiURL() string {
 		log.Fatalf("SITE_DOMAIN is not set")
 	}
 
-	return fmt.Sprintf("https://%s/", addr)
+	return fmt.Sprintf("https://%s", addr)
 }
 
 func ise(err error, w http.ResponseWriter) {
