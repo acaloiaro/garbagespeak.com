@@ -397,8 +397,8 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl := template.Must(template.ParseFS(partialsFS, "partials/users/login.html"))
-	err = tmpl.ExecuteTemplate(w, "login.html", map[string]any{
+	tmpl := template.Must(template.ParseFS(partialsFS, "partials/users/login_validation.html"))
+	err = tmpl.ExecuteTemplate(w, "login_validation.html", map[string]any{
 		"ApiBaseURL": apiURL(),
 		"LoginError": "Incorrect username or password",
 		"Username":   username,
