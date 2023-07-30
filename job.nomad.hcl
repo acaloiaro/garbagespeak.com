@@ -43,7 +43,7 @@ job "garbage_speak" {
         data = <<EOF
         {{ with nomadVar "nomad/jobs/garbage_speak" }}POSTGRES_URL=postgresql://{{ .POSTGRES_USER }}:{{ .POSTGRES_PASSWORD }}{{end}}@{{ range nomadService "postgres" }}{{ .Address }}:{{ .Port }}{{ end }}/garbage_speak?sslmode=disable
 {{ with nomadVar "nomad/jobs/garbage_speak" }}SMTP_PASSWORD={{ .SMTP_PASSWORD }}
-SMTP_USER={{ .SMTP_USER }}
+SMTP_USERNAME={{ .SMTP_USERNAME }}
 SMTP_HOST={{ .SMTP_HOST }}{{ end }}
 GO_ENV=production
 SITE_DOMAIN=garbagespeak.com
