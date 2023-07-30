@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/smtp"
 	"os"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -192,6 +193,8 @@ func main() {
 			garbage.Get("/{garbage_id}/edit", editGarbageHandler)
 			garbage.Put("/{garbage_id}", editGarbageUpdateHandler)
 			garbage.Get("/{garbage_id}", showGarbageHandler)
+			garbage.Put("/{garbage_id}/uplevel", addUplevelHandler)
+			garbage.Get("/{garbage_id}/uplevel", getUplevelHandler)
 		})
 	})
 
@@ -209,6 +212,34 @@ func main() {
 	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func getUplevelHandler(w http.ResponseWriter, r *http.Request) {
+	garbageID := chi.URLParam(r, "garbage_id")
+
+	var uplevel int
+	db.QueryRow(r.Context(), "SELECT COUNT(*) FROM uplevels WHERE garbage_id = $1", garbageID).Scan(&uplevel)
+
+	w.Write([]byte(strconv.Itoa(uplevel)))
+	w.WriteHeader(http.StatusOK)
+}
+
+func addUplevelHandler(w http.ResponseWriter, r *http.Request) {
+	garbageID := chi.URLParam(r, "garbage_id")
+	userID := sessions.GetString(r.Context(), "userID")
+
+	if userID == "" {
+		ise(errors.New("not logged in"), w)
+		return
+	}
+
+	ctx := context.Background()
+	db.QueryRow(ctx,
+		"INSERT INTO uplevels(garbage_id, user_id) VALUES ($1, $2)",
+		garbageID,
+		userID)
+
+	w.Header().Add("hx-location", appURL())
 }
 
 func editGarbageUpdateHandler(w http.ResponseWriter, r *http.Request) {

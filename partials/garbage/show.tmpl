@@ -3,9 +3,13 @@
   <h1 class="post-title">
   {{if .Url}}<a href={{ .Url }} target="_blank">{{.Title}} (link)</a>{{else}}{{.Title}}{{ end }}</h1>
   <div class="post-meta">
-    {{- with .Username -}}
-    <span>Submitter:&nbsp;{{ . }}</span>
-    {{- end -}}
+    <button hx-put="{{ if ne $.UserID ""}}{{ $.ApiBaseUrl }}/garbage/{{ .ID }}/uplevel{{else}}#{{end}}">
+      <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <path fill="none" stroke="purple" stroke-linecap="round" stroke-linejoin="round" stroke-width="6" d="m12 4l-6 6m6-6l6 6m-6-6v10.5m0 5.5v-2.5"/>
+    </svg>
+    Uplevel <b><span hx-get="{{ $.ApiBaseUrl }}/garbage/{{ .ID }}/uplevel" hx-trigger="load"></span></b>
+    </button>
+    <span>Submitter:&nbsp;{{ .Username }}</span>
     {{ if eq .OwnerID.String $.UserID }}
     <a href="{{ $.ApiBaseUrl }}/garbage/{{ .ID }}/edit"
       hx-get="{{ $.ApiBaseUrl }}/garbage/{{ .ID }}/edit"
@@ -19,11 +23,9 @@
       hx-target="#content"
       hx-swap="innerHTML">Permalink</a>
 
-    {{- with .CreatedAt -}}
-      <time class="post-date">
-        {{- .Format "2006-01-02" -}}
-      </time>
-    {{- end -}}
+    <time class="post-date">
+      {{- .CreatedAt.Format "2006-01-02" -}}
+    </time>
   </div>
   <div class="post-content">
     <blockquote>{{ .Content }}</blockquote>

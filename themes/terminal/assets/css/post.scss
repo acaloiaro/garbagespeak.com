@@ -38,6 +38,19 @@
         margin: 0 8px;
       }
     }
+
+    svg {
+      height: 25px;
+      width: 25px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    button {
+      display: inline-block;
+      border-radius: 10px;
+      font-weight: normal;
+    }
   }
 
   &-title {
