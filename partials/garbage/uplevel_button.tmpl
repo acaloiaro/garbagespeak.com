@@ -1,0 +1,11 @@
+<button
+  {{ if ne $.UserID ""}}
+    hx-put="{{ $.ApiBaseUrl }}/garbage/{{ .Garbage.ID }}/uplevel"
+  {{else}}disabled{{end}}
+    hx-swap="outerHTML">
+  <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+    <path fill="none" stroke="purple" stroke-linecap="round" stroke-linejoin="round" stroke-width="6" d="m12 4l-6 6m6-6l6 6m-6-6v10.5m0 5.5v-2.5"/>
+  </svg>
+  Uplevel <b><span hx-get="{{ $.ApiBaseUrl }}/garbage/{{ .Garbage.ID }}/uplevel" hx-trigger="load"></span></b>
+</button>
+

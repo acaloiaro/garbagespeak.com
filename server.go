@@ -239,7 +239,20 @@ func addUplevelHandler(w http.ResponseWriter, r *http.Request) {
 		garbageID,
 		userID)
 
-	w.Header().Add("hx-location", appURL())
+	garbageUUID, _ := uuid.FromString(garbageID)
+	garbage := Garbage{ID: garbageUUID}
+	tmpl := template.Must(template.ParseFS(partialsFS, "partials/garbage/uplevel_button.tmpl"))
+	err := tmpl.ExecuteTemplate(w, "uplevel_button.tmpl", map[string]any{
+		"Garbage":    garbage,
+		"ApiBaseUrl": apiURL(),
+		"UserID":     userID,
+	})
+	if err != nil {
+		ise(err, w)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func editGarbageUpdateHandler(w http.ResponseWriter, r *http.Request) {
@@ -679,7 +692,7 @@ func listGarbageHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(
 		template.New("list.html").
 			Funcs(template.FuncMap{"PostWrapper": showParams}).
-			ParseFS(partialsFS, "partials/garbage/list.html", "partials/garbage/show.tmpl"))
+			ParseFS(partialsFS, "partials/garbage/list.html", "partials/garbage/*.tmpl"))
 
 	err = tmpl.ExecuteTemplate(w, "list.html", map[string]any{
 		"Posts":      garbage,
