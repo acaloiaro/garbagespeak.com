@@ -48,11 +48,13 @@ This is complex. _Intentional_ is being used not to communicate intention, but t
 
 ## What are the rules for thought leaders posting new garbage speak?
 
-You can post any garbage speak seen in the wild, so long as it is not embellished and does not identify any individuals or companies.
+You can post any garbage speak seen in the wild, so long as it is not embellished and if the garbage was not made in a public setting, it does not identify any individuals or organizations.
 
 Garbage speak suspected of embellishment will be removed.
 
 If the garbage speak is _not_ proprietary, e.g. an internal company Slack conversation, we encourage users to add URLs any content.
+
+If a post is perceived as hostile or harassment, it will be removed.
 
 ## Do I need to sign up to anything to become a thought leader?
 
