@@ -61,3 +61,7 @@ Yes. We require registration to combat spam / ensure that repeat embellishment o
 ## What's the go-to-market for future features?
 
 TBD -- we're thinking about adding a leader board for top trash. Only registered users will be eligible for the leader board.
+
+## Can I contribute?
+
+The pinnacle of thought leadership begins with contributions to this site's git repository [https://github.com/acaloiaro/garbagespeak.com](https://github.com/acaloiaro/garbagespeak.com).
