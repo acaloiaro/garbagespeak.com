@@ -1,0 +1,1 @@
+ALTER TABLE garbages DROP COLUMN n;

@@ -50,6 +50,7 @@ type Garbage struct {
 	Metadata  map[string]any
 	Url       string
 	CreatedAt time.Time
+	N         int
 }
 
 // User represents 'user' records from the database
@@ -85,6 +86,7 @@ var db *pgxpool.Pool
 var sessions *scs.SessionManager
 var sessionStore *pgxstore.PostgresStore
 var NQ types.Backend
+var pageSize = 25
 
 // run migrations, acquire a database connection pool, and create the session store
 func init() {
@@ -676,19 +678,46 @@ func argsfn(kvs ...interface{}) (map[string]interface{}, error) {
 	return m, nil
 }
 
+// pagedQuery returns a paged query for the given query
+func pagedQuery(r *http.Request, query string) (pagedQuery string, firstItem *int) {
+	firstItemStr := r.URL.Query().Get("first_item")
+
+	var err error
+	var fi int
+	fi, err = strconv.Atoi(firstItemStr)
+	if err != nil {
+		pagedQuery = query + " ORDER BY n DESC LIMIT $1"
+		return
+	}
+	firstItem = &fi
+
+	// newer items have a larger n, since n monotonically increases
+	// hence we filter where n < our first item's n
+	pagedQuery = query + " WHERE n < $2"
+	pagedQuery = pagedQuery + " ORDER BY n DESC LIMIT $1"
+
+	return
+}
+
 // listGarbageHandler returns the latest garbage
 func listGarbageHandler(w http.ResponseWriter, r *http.Request) {
 	userID := sessions.GetString(r.Context(), "userID")
+
+	query := `SELECT
+			garbages.id, n, owner_id, username, title, content, metadata, url, garbages.created_at
+			FROM garbages
+			JOIN users ON garbages.owner_id = users.id`
+	pagedQuery, firstItem := pagedQuery(r, query)
+
 	ctx := context.Background()
 	garbage := []*Garbage{}
-	err := pgxscan.Select(
-		ctx,
-		db,
-		&garbage,
-		`SELECT garbages.id, owner_id, username, title, content, metadata, url, garbages.created_at
-			FROM garbages
-			JOIN users ON garbages.owner_id = users.id
-			ORDER BY created_at DESC`)
+	var err error
+	if firstItem != nil {
+		err = pgxscan.Select(ctx, db, &garbage, pagedQuery, pageSize, firstItem)
+	} else {
+		err = pgxscan.Select(ctx, db, &garbage, pagedQuery, pageSize)
+	}
+
 	if err != nil {
 		ise(err, w)
 		return
@@ -699,23 +728,44 @@ func listGarbageHandler(w http.ResponseWriter, r *http.Request) {
 			Funcs(template.FuncMap{"argsfn": argsfn}).
 			ParseFS(partialsFS, "partials/garbage/list.html", "partials/garbage/*.tmpl"))
 
-	err = tmpl.ExecuteTemplate(w, "list.html", map[string]any{
+	// pagination
+	var lastItem *int
+	il := len(garbage) - 1
+	if il >= 0 {
+		lastItem = &(garbage[il].N)
+	}
+
+	var buff = bytes.NewBufferString("")
+	err = tmpl.ExecuteTemplate(buff, "list.html", map[string]any{
 		"Posts":      garbage,
 		"ApiBaseUrl": apiURL(),
 		"LoggedIn":   isLoggedIn(r),
 		"UserID":     userID,
+		"LastItem":   lastItem,
 	})
 	if err != nil {
 		ise(err, w)
 		return
 	}
 
+	if isPartialRequest(r) {
+		w.Write(buff.Bytes())
+	} else {
+		indexFile, _ := publicFS.Open("public/index.html")
+		content := html_parser.ParseAndSplice(indexFile, "content", buff.String())
+		log.Println(content)
+		w.Write([]byte(content))
+	}
+
 	w.WriteHeader(http.StatusOK)
+}
+
+func isPartialRequest(r *http.Request) bool {
+	return r.Header.Get("hx-request") != ""
 }
 
 // showGarbageHandler returns the latest garbage
 func showGarbageHandler(w http.ResponseWriter, r *http.Request) {
-	isPartialRequest := r.Header.Get("hx-request") != ""
 	garbageID := chi.URLParam(r, "garbage_id")
 	userID := sessions.GetString(r.Context(), "userID")
 	ctx := context.Background()
@@ -727,8 +777,7 @@ func showGarbageHandler(w http.ResponseWriter, r *http.Request) {
 		`SELECT garbages.id, owner_id, username, title, content, metadata, url, garbages.created_at
 			FROM garbages
 			JOIN users ON garbages.owner_id = users.id
-			WHERE garbages.id = $1
-			ORDER BY created_at DESC`, garbageID)
+			WHERE garbages.id = $1`, garbageID)
 	if err != nil {
 		ise(err, w)
 		return
@@ -750,7 +799,7 @@ func showGarbageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if isPartialRequest {
+	if isPartialRequest(r) {
 		w.Write(buff.Bytes())
 	} else {
 		indexFile, _ := publicFS.Open("public/index.html")

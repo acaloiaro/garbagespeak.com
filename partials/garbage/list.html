@@ -4,6 +4,16 @@
  {{end}}
 </div>
 
+<div id="pager">
+{{ if .LastItem }}
+    <a
+      hx-get="{{ $.ApiBaseUrl }}/garbage/list?first_item={{ .LastItem }}"
+      hx-push-url="{{ $.ApiBaseUrl }}/garbage/list?first_item={{ .LastItem }}"
+      hx-target="#content"
+      href="{{ $.ApiBaseUrl }}/garbage/list?first_item={{ .LastItem }}">Next Page</a>
+{{ end }}
+</div>
+
 {{- with .Alert -}}
   <div id="alert" remove-me="5s" class="alert">{{ . }}</div>
 {{ end }}
