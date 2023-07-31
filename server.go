@@ -660,15 +660,20 @@ func createAccountHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// showParams creates a map that includes all ther required parameters for "garbage/show.tmpl"
-// this is used in "garbage/list.html" to combine all the params for the show template inside
-// the loop over all posts
-func showParams(g Garbage, userID string, apiBaseURL string) map[string]any {
-	return map[string]any{
-		"Garbage":    g,
-		"UserID":     userID,
-		"ApiBaseUrl": apiBaseURL,
+// argsfn is a template function to pass arbitrary template variables into sub-templates
+func argsfn(kvs ...interface{}) (map[string]interface{}, error) {
+	if len(kvs)%2 != 0 {
+		return nil, errors.New("args requires even number of arguments")
 	}
+	m := make(map[string]interface{})
+	for i := 0; i < len(kvs); i += 2 {
+		s, ok := kvs[i].(string)
+		if !ok {
+			return nil, errors.New("even args to args must be strings")
+		}
+		m[s] = kvs[i+1]
+	}
+	return m, nil
 }
 
 // listGarbageHandler returns the latest garbage
@@ -691,7 +696,7 @@ func listGarbageHandler(w http.ResponseWriter, r *http.Request) {
 
 	tmpl := template.Must(
 		template.New("list.html").
-			Funcs(template.FuncMap{"PostWrapper": showParams}).
+			Funcs(template.FuncMap{"argsfn": argsfn}).
 			ParseFS(partialsFS, "partials/garbage/list.html", "partials/garbage/*.tmpl"))
 
 	err = tmpl.ExecuteTemplate(w, "list.html", map[string]any{
@@ -730,7 +735,10 @@ func showGarbageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var buff = bytes.NewBufferString("")
-	tmpl := template.Must(template.ParseFS(partialsFS, "partials/garbage/show.tmpl"))
+	tmpl := template.Must(
+		template.New("list.html").
+			Funcs(template.FuncMap{"argsfn": argsfn}).
+			ParseFS(partialsFS, "partials/garbage/show.tmpl", "partials/garbage/*.tmpl"))
 	err = tmpl.ExecuteTemplate(buff, "show.tmpl", map[string]any{
 		"Garbage":    garbage,
 		"ApiBaseUrl": apiURL(),

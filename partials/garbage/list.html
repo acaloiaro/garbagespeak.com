@@ -1,6 +1,6 @@
 <div class="posts">
  {{range .Posts}}
-   {{ template "show.tmpl" (PostWrapper . $.UserID $.ApiBaseUrl) }}
+   {{ template "show.tmpl" (argsfn "Garbage" . "UserID" $.UserID "ApiBaseUrl" $.ApiBaseUrl "argsfn" argsfn) }}
  {{end}}
 </div>
 

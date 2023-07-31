@@ -3,7 +3,7 @@
   <h1 class="post-title">
   {{if .Url}}<a href={{ .Url }} target="_blank">{{.Title}} (link)</a>{{else}}{{.Title}}{{ end }}</h1>
   <div class="post-meta">
-    {{ template "uplevel_button.tmpl" (PostWrapper . $.UserID $.ApiBaseUrl) }}
+    {{ template "uplevel_button.tmpl" (argsfn "Garbage" . "UserID" $.UserID "ApiBaseUrl" $.ApiBaseUrl) }}
     <span>Submitter:&nbsp;{{ .Username }}</span>
     {{ if eq .OwnerID.String $.UserID }}
     <a href="{{ $.ApiBaseUrl }}/garbage/{{ .ID }}/edit"
