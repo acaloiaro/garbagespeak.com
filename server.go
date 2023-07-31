@@ -37,20 +37,26 @@ import (
 	pgxuuid "github.com/jackc/pgx-gofrs-uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
+	gmhtml "github.com/yuin/goldmark/renderer/html"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
 // Garbage represents 'garbage' records from the database
 type Garbage struct {
-	ID        uuid.UUID
-	OwnerID   uuid.UUID
-	Username  string
-	Title     string
-	Content   string
-	Metadata  map[string]any
-	Url       string
-	CreatedAt time.Time
-	N         int
+	ID              uuid.UUID
+	OwnerID         uuid.UUID
+	Username        string
+	Title           string
+	Content         string  // the raw, user-supplied content
+	RenderedContent *string // the content run through goldmark
+	Metadata        map[string]any
+	Url             string
+	CreatedAt       time.Time
+	N               int
 }
 
 // User represents 'user' records from the database
@@ -82,6 +88,7 @@ var publicFS embed.FS
 //go:embed all:partials
 var partialsFS embed.FS
 
+var md goldmark.Markdown
 var db *pgxpool.Pool
 var sessions *scs.SessionManager
 var sessionStore *pgxstore.PostgresStore
@@ -147,6 +154,16 @@ func init() {
 		fmt.Fprintf(os.Stderr, "Unable to initialize welcome email handler: %v\n", err)
 		os.Exit(1)
 	}
+
+	md = goldmark.New(
+		goldmark.WithExtensions(extension.GFM),
+		goldmark.WithParserOptions(
+			parser.WithAutoHeadingID(),
+		),
+		goldmark.WithRendererOptions(
+			gmhtml.WithHardWraps(),
+		),
+	)
 }
 
 func main() {
@@ -273,13 +290,14 @@ func editGarbageUpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	url := r.PostForm.Get("url")
 	title := r.PostForm.Get("title")
-	garbage := r.PostForm.Get("garbage")
+	content := r.PostForm.Get("garbage")
 	// TODO this is an arbitrary length that will likely need to change
-	if len(garbage) == 10 {
+	if len(content) == 10 {
 		w.WriteHeader(400)
 		return
 	}
 
+	renderedContent := mdToHtml(content)
 	metadata := map[string]any{}
 	tags := r.Form["tags"]
 	if len(tags) > 0 {
@@ -288,9 +306,10 @@ func editGarbageUpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 	_, err := db.Exec(ctx,
-		"UPDATE garbages SET (title, content, url, metadata) = ($1, $2, $3, $4) WHERE id = $5",
+		"UPDATE garbages SET (title, content, rendered_content, url, metadata) = ($1, $2, $3, $4, $5) WHERE id = $6",
 		title,
-		garbage,
+		content,
+		renderedContent,
 		url,
 		metadata,
 		garbageID)
@@ -313,7 +332,7 @@ func editGarbageHandler(w http.ResponseWriter, r *http.Request) {
 		ctx,
 		db,
 		&garbage,
-		`SELECT id, owner_id, title, content, metadata, url FROM garbages WHERE id = $1 AND owner_id = $2`, garbageID, userID)
+		`SELECT id, owner_id, title, content, rendered_content, metadata, url FROM garbages WHERE id = $1 AND owner_id = $2`, garbageID, userID)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
@@ -534,6 +553,16 @@ func emailVerification(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, appURL(), http.StatusFound)
 }
 
+func mdToHtml(markdown string) (html string) {
+	var buf bytes.Buffer
+	if err := md.Convert([]byte(markdown), &buf); err != nil {
+		panic(err)
+	}
+
+	html = buf.String()
+	return
+}
+
 func createGarbageHandler(w http.ResponseWriter, r *http.Request) {
 	if !isLoggedIn(r) {
 		w.Header().Add("hx-location", fmt.Sprintf("%s/users/login", appURL()))
@@ -552,13 +581,14 @@ func createGarbageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	title := r.PostForm.Get("title")
-	garbage := r.PostForm.Get("garbage")
+	content := r.PostForm.Get("garbage")
 	// TODO this is an arbitrary length that will likely need to change
-	if len(garbage) == 10 {
+	if len(content) == 10 {
 		w.WriteHeader(400)
 		return
 	}
 
+	renderedContent := mdToHtml(content)
 	url := r.PostForm.Get("url")
 
 	metadata := map[string]any{}
@@ -569,9 +599,10 @@ func createGarbageHandler(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 	db.QueryRow(ctx,
-		"INSERT INTO garbages(title, content, url, metadata, owner_id) VALUES ($1, $2, $3, $4, $5)",
+		"INSERT INTO garbages(title, content, rendered_content, url, metadata, owner_id) VALUES ($1, $2, $3, $4, $5, $6)",
 		title,
-		garbage,
+		content,
+		renderedContent,
 		url,
 		metadata,
 		userID)
@@ -704,7 +735,7 @@ func listGarbageHandler(w http.ResponseWriter, r *http.Request) {
 	userID := sessions.GetString(r.Context(), "userID")
 
 	query := `SELECT
-			garbages.id, n, owner_id, username, title, content, metadata, url, garbages.created_at
+			garbages.id, n, owner_id, username, title, rendered_content, metadata, url, garbages.created_at
 			FROM garbages
 			JOIN users ON garbages.owner_id = users.id`
 	pagedQuery, firstItem := pagedQuery(r, query)
@@ -773,7 +804,7 @@ func showGarbageHandler(w http.ResponseWriter, r *http.Request) {
 		ctx,
 		db,
 		&garbage,
-		`SELECT garbages.id, owner_id, username, title, content, metadata, url, garbages.created_at
+		`SELECT garbages.id, owner_id, username, title, rendered_content, metadata, url, garbages.created_at
 			FROM garbages
 			JOIN users ON garbages.owner_id = users.id
 			WHERE garbages.id = $1`, garbageID)
@@ -814,7 +845,6 @@ func showGarbageHandler(w http.ResponseWriter, r *http.Request) {
 func sendWelcomeEmail(recipient, verificationURL, siteName string) error {
 	smtpHost := os.Getenv("SMTP_HOST")
 	from := fmt.Sprintf("noreply@%s", os.Getenv("SITE_DOMAIN"))
-	to := []string{recipient}
 
 	msg := []byte(fmt.Sprintf("To: %s\r\n", recipient) +
 		fmt.Sprintf("From: %s", from) + "\r\n" +
