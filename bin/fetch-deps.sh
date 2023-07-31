@@ -11,3 +11,5 @@ curl -sL "https://htmx.org/img/bars.svg" > static/img/bars.svg
 echo '<script type="text/javascript" src="/htmx.js"></script>' > layouts/partials/extended_head.html
 echo '<script type="text/javascript" src="/remove-me.js"></script>' >> layouts/partials/extended_head.html
 echo "<meta name=\"htmx-config\" content='{\"withCredentials\": true}'>" >> layouts/partials/extended_head.html
+echo '<script defer data-domain="garbagespeak.com" src="/js/script.tagged-events.js"></script>' >> layouts/partials/extended_head.html
+
