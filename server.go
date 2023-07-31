@@ -753,7 +753,6 @@ func listGarbageHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		indexFile, _ := publicFS.Open("public/index.html")
 		content := html_parser.ParseAndSplice(indexFile, "content", buff.String())
-		log.Println(content)
 		w.Write([]byte(content))
 	}
 
@@ -804,7 +803,6 @@ func showGarbageHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		indexFile, _ := publicFS.Open("public/index.html")
 		content := html_parser.ParseAndSplice(indexFile, "content", buff.String())
-		log.Println(content)
 		w.Write([]byte(content))
 	}
 
@@ -818,14 +816,11 @@ func sendWelcomeEmail(recipient, verificationURL, siteName string) error {
 	from := fmt.Sprintf("noreply@%s", os.Getenv("SITE_DOMAIN"))
 	to := []string{recipient}
 
-	log.Println("SMTP host:", smtpHost, "from:", from)
-
 	msg := []byte(fmt.Sprintf("To: %s\r\n", recipient) +
 		fmt.Sprintf("From: %s", from) + "\r\n" +
 		fmt.Sprintf("Subject: Welcome to %s!\r\n", siteName) + "\r\n" +
 		fmt.Sprintf("Verify your email address by visiting: %s\r\n", verificationURL))
 
-	log.Println("to:", to, "msg:", string(msg))
 	host, _, _ := net.SplitHostPort(smtpHost)
 
 	auth := smtp.PlainAuth("", os.Getenv("SMTP_USERNAME"), os.Getenv("SMTP_PASSWORD"), host)
