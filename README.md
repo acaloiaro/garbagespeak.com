@@ -1,6 +1,6 @@
 # Garbage Speak
 
-A fun, dumb, and ultimately useless website inspired by this [tour de force](https://www.vulture.com/2020/02/spread-of-corporate-speak.html)
+A fun, dumb, and ultimately useless website inspired by this [tour de force](https://www.vulture.com/2020/02/spread-of-corporate-speak.html).
 
 ## About
 
@@ -35,7 +35,7 @@ mkdir public && touch public/.empty
 
 ### Migrations
 
-Migrations required `go-migrate` to be run locally:
+Migrations require `go-migrate` to be run locally:
 
 `go install github.com/golang-migrate/migrate@v4`
 
