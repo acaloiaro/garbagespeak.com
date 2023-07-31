@@ -34,8 +34,6 @@ job "garbage_speak" {
         options {
           aws_access_key_id     = var.b2_access_key_id
           aws_access_key_secret = var.b2_secret_access_key
-          # Leave the archive in tar format
-          archive = false
         }
       }
 
