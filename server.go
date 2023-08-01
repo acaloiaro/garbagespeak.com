@@ -36,6 +36,7 @@ import (
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	pgxuuid "github.com/jackc/pgx-gofrs-uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
@@ -257,11 +258,19 @@ func addUplevelHandler(w http.ResponseWriter, r *http.Request) {
 		"INSERT INTO uplevels(garbage_id, user_id) VALUES ($1, $2)",
 		garbageID,
 		userID)
+
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" { // duplicate key error
+				goto render
+			}
+		}
 		ise(err, w)
 		return
 	}
 
+render:
 	garbageUUID, _ := uuid.FromString(garbageID)
 	garbage := Garbage{ID: garbageUUID}
 	tmpl := template.Must(template.ParseFS(partialsFS, "partials/garbage/uplevel_button.tmpl"))
