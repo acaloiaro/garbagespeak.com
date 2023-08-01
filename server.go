@@ -253,15 +253,19 @@ func addUplevelHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := context.Background()
-	db.QueryRow(ctx,
+	_, err := db.Exec(ctx,
 		"INSERT INTO uplevels(garbage_id, user_id) VALUES ($1, $2)",
 		garbageID,
 		userID)
+	if err != nil {
+		ise(err, w)
+		return
+	}
 
 	garbageUUID, _ := uuid.FromString(garbageID)
 	garbage := Garbage{ID: garbageUUID}
 	tmpl := template.Must(template.ParseFS(partialsFS, "partials/garbage/uplevel_button.tmpl"))
-	err := tmpl.ExecuteTemplate(w, "uplevel_button.tmpl", map[string]any{
+	err = tmpl.ExecuteTemplate(w, "uplevel_button.tmpl", map[string]any{
 		"Garbage":    garbage,
 		"ApiBaseUrl": apiURL(),
 		"UserID":     userID,
