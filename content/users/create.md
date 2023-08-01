@@ -28,7 +28,7 @@ title: Create Account
 
         <label for="password">Password</label>
         <input
-          id="password
+          id="password"
           type="password"
           name="password"
           placeholder="desired password"
@@ -39,7 +39,7 @@ title: Create Account
         <label for="password_confirmation">Password Confirmation</label>
         <input
           id="password_confirmation"
-          type="text"
+          type="password"
           name="password_confirmation"
           placeholder="desired password again"
           hx-post="{{ .Site.Params.apiBaseUrl }}/users/new_user_validation"

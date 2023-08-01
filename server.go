@@ -184,7 +184,7 @@ func main() {
 		AllowCredentials: true,
 		AllowedOrigins:   []string{"http://localhost:1313", fmt.Sprintf("https://%s", os.Getenv("SITE_DOMAIN"))},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Cookie", "Authorization", "Content-Type", "X-CSRF-Token", "hx-target", "hx-current-url", "hx-request", "hx-trigger", "hx-trigger-name"},
+		AllowedHeaders:   []string{"Accept", "Cookie", "Authorization", "Content-Type", "X-CSRF-Token", "hx-target", "hx-current-url", "hx-request", "hx-trigger", "hx-trigger-name", "hx-boosted"},
 		ExposedHeaders:   []string{"Link", "HX-Location", "Vary", "Access-Control-Allow-Origin"},
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	}))
@@ -481,7 +481,9 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 // logoutHandler handles users logout requests
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	sessions.Destroy(r.Context())
-	http.Redirect(w, r, appURL(), http.StatusFound)
+
+	w.Header().Add("hx-location", appURL())
+	w.WriteHeader(http.StatusOK)
 }
 
 // navUserItems returns a nav items depending on whether the user is logged in

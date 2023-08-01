@@ -94,12 +94,12 @@ enableInlineShortcodes = true
       [[languages.en.menu.main]]
         identifier = "dictionary"
         name = "Dictionary"
-        url = "/dictionary"
+        url = "/dictionary/"
 
       [[languages.en.menu.main]]
         identifier = "faq"
         name = "FAQ"
-        url = "/faq"
+        url = "/faq/"
         weight = 2
 
 [module]
