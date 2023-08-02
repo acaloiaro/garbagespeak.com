@@ -7,6 +7,8 @@ toc: true
 
 Garbage speak is a community of thought leaders sharing out the latest developments in human language.
 
+What you see on the front page of garbage speak are real world examples of people communicating at their jobs, online, or writing to a larger audience. The front page consists of garbage speak-laden excepts from those communications. Much of what you see here comes from internal email and Slack conversations. It is our belief that this garbage should not remain behind walls, but made available so our fellow thought leaders can learn to speak with a deft command of inscrutable language.
+
 We are the value drivers of our organizations, and we are here to futureproof language against stagnation.
 
 We verb nouns and noun adjectives.
