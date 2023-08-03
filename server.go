@@ -551,7 +551,7 @@ func emailVerification(w http.ResponseWriter, r *http.Request) {
 	var userID string
 	err = tx.QueryRow(r.Context(), "DELETE FROM user_email_verifications WHERE id = $1 RETURNING user_id", uevID).Scan(&userID)
 	if err != nil {
-		log.Fatalf("can't verify email address: %v", err)
+		goto render
 	}
 
 	err = sessions.RenewToken(r.Context())
@@ -565,6 +565,7 @@ func emailVerification(w http.ResponseWriter, r *http.Request) {
 
 	tx.Commit(r.Context())
 
+render:
 	http.Redirect(w, r, appURL(), http.StatusFound)
 }
 
