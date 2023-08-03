@@ -130,6 +130,8 @@ func init() {
 	}
 
 	sessions = scs.New()
+	sessions.Lifetime = time.Duration(24 * time.Hour * 365)
+
 	sessionStore = pgxstore.New(db)
 
 	sessions.Cookie.Name = "session_id"
