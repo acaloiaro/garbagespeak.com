@@ -464,13 +464,18 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	var storedPasswordHash string
 
 	// this anti-join prevents users with pending user email verifications from logging in
-	antiJoinQuery := `SELECT id, password FROM users
+	antiJoinQuery := `SELECT users.id, password FROM users
 LEFT JOIN user_email_verifications ON user_email_verifications.user_id = users.id
-WHERE user_email_verifications.id IS NULL`
-
-	db.QueryRow(r.Context(), antiJoinQuery, username).Scan(&userID, &storedPasswordHash)
+WHERE user_email_verifications.id IS NULL
+AND username = $1`
 
 	var err error
+	err = db.QueryRow(r.Context(), antiJoinQuery, username).Scan(&userID, &storedPasswordHash)
+	if err != nil {
+		ise(err, w)
+		return
+	}
+
 	if err = bcrypt.CompareHashAndPassword([]byte(storedPasswordHash), []byte(password)); err == nil {
 		err = sessions.RenewToken(r.Context())
 		if err != nil {
