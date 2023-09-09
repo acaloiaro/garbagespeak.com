@@ -89,12 +89,14 @@ var publicFS embed.FS
 //go:embed all:partials
 var partialsFS embed.FS
 
-var md goldmark.Markdown
-var db *pgxpool.Pool
-var sessions *scs.SessionManager
-var sessionStore *pgxstore.PostgresStore
-var NQ types.Backend
-var pageSize = 25
+var (
+	md           goldmark.Markdown
+	db           *pgxpool.Pool
+	sessions     *scs.SessionManager
+	sessionStore *pgxstore.PostgresStore
+	NQ           types.Backend
+	pageSize     = 25
+)
 
 // run migrations, acquire a database connection pool, and create the session store
 func init() {
@@ -118,7 +120,7 @@ func init() {
 		fmt.Fprintf(os.Stderr, "Unable to configure database: %v\n", err)
 		os.Exit(1)
 	}
-	dbconfig.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+	dbconfig.AfterConnect = func(_ context.Context, conn *pgx.Conn) error {
 		pgxuuid.Register(conn.TypeMap())
 		return nil
 	}
@@ -260,7 +262,6 @@ func addUplevelHandler(w http.ResponseWriter, r *http.Request) {
 		"INSERT INTO uplevels(garbage_id, user_id) VALUES ($1, $2)",
 		garbageID,
 		userID)
-
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
@@ -328,7 +329,6 @@ func editGarbageUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		url,
 		metadata,
 		garbageID)
-
 	if err != nil {
 		ise(err, w)
 		return
@@ -796,7 +796,7 @@ func listGarbageHandler(w http.ResponseWriter, r *http.Request) {
 		lastItem = &(garbage[il].N)
 	}
 
-	var buff = bytes.NewBufferString("")
+	buff := bytes.NewBufferString("")
 	err = tmpl.ExecuteTemplate(buff, "list.html", map[string]any{
 		"Posts":      garbage,
 		"ApiBaseUrl": apiURL(),
@@ -843,7 +843,7 @@ func showGarbageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var buff = bytes.NewBufferString("")
+	buff := bytes.NewBufferString("")
 	tmpl := template.Must(
 		template.New("list.html").
 			Funcs(template.FuncMap{"argsfn": argsfn}).
@@ -910,7 +910,7 @@ func sendWelcomeEmail(recipient, verificationURL, siteName string) error {
 		log.Panic(err)
 	}
 
-	//Recipient
+	// Recipient
 	if err = c.Rcpt(recipient); err != nil {
 		log.Panic(err)
 	}
@@ -995,6 +995,6 @@ func ise(err error, w http.ResponseWriter) {
 }
 
 func isLoggedIn(r *http.Request) bool {
-	var _, err = r.Cookie("session_id")
+	_, err := r.Cookie("session_id")
 	return err == nil
 }
