@@ -15,6 +15,8 @@ job "garbage_speak" {
   namespace = "default"
 
   group "task" {
+    count = 2
+    
     network {
       port "garbage_speak" {
         to = 1314
