@@ -3,6 +3,8 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/Microsoft/go-winio v0.6.1 h1:9/kr64B9VUZrLm5YYwbGtUJnMgqWVOdUAXu6Migciow=
 github.com/acaloiaro/neoq v0.18.0 h1:WKTDNEL/sH5hlwd/7Kgbqb4kKdvNVdzNNjfKRtt3v5k=
 github.com/acaloiaro/neoq v0.18.0/go.mod h1:uLI2JfC2V9p+H5lx5s0SUsjxIYLm8JDhi6VkyURMvLM=
+github.com/acaloiaro/neoq v0.24.0 h1:Cpx9d3w4NzanKDt7S1m2dNdZD2V7IPETpRvGhLQX0mc=
+github.com/acaloiaro/neoq v0.24.0/go.mod h1:ik5UC6r6U4ANyrzYO6sZ9lBHTQuOHVLH8VblxWA3kLI=
 github.com/alexedwards/scs/pgxstore v0.0.0-20230327161757-10d4299e3b24 h1:l8+ZTNz/s7fbpTz/oeUmXCL39Rn49SRaXnj2/LZzCos=
 github.com/alexedwards/scs/pgxstore v0.0.0-20230327161757-10d4299e3b24/go.mod h1:KTB1slYgIU/BBa4MWA5IdET31OsbPQBM7dqDw5klIt4=
 github.com/alexedwards/scs/v2 v2.5.1 h1:EhAz3Kb3OSQzD8T+Ub23fKsiuvE0GzbF5Lgn0uTwM3Y=
@@ -43,6 +45,8 @@ github.com/hashicorp/go-multierror v1.1.1 h1:H5DkEtf6CXdFp0N0Em5UCwQpXMWke8IA0+l
 github.com/hashicorp/go-multierror v1.1.1/go.mod h1:iw975J/qwKPdAO1clOe2L8331t/9/fmwbPZ6JB6eMoM=
 github.com/iancoleman/strcase v0.2.0 h1:05I4QRnGpI0m37iZQRuskXh+w77mr6Z41lwQzuHLwW0=
 github.com/iancoleman/strcase v0.2.0/go.mod h1:iwCmte+B7n89clKwxIoIXy/HfoL7AsD47ZCWhYzw7ho=
+github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa h1:s+4MhCQ6YrzisK6hFJUX53drDT4UsSW3DEhKn0ifuHw=
+github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa/go.mod h1:a/s9Lp5W7n/DD0VrVoyJ00FbP2ytTPDVOivvn2bMlds=
 github.com/jackc/pgpassfile v1.0.0 h1:/6Hmqy13Ss2zCq62VdNG8tM1wchn8zjSGOBJ6icpsIM=
 github.com/jackc/pgpassfile v1.0.0/go.mod h1:CEx0iS5ambNFdcRtxPj5JhEz+xB6uRky5eyVu/W2HEg=
 github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a h1:bbPeKD0xmW/Y25WS6cokEszi5g+S0QxI/d45PkRi7Nk=

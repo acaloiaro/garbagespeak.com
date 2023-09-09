@@ -23,7 +23,6 @@ import (
 	"github.com/acaloiaro/neoq/backends/postgres"
 	"github.com/acaloiaro/neoq/handler"
 	"github.com/acaloiaro/neoq/jobs"
-	"github.com/acaloiaro/neoq/types"
 	"github.com/alexedwards/scs/pgxstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/georgysavva/scany/v2/pgxscan"
@@ -94,7 +93,7 @@ var (
 	db           *pgxpool.Pool
 	sessions     *scs.SessionManager
 	sessionStore *pgxstore.PostgresStore
-	NQ           types.Backend
+	NQ           neoq.Neoq
 	pageSize     = 25
 )
 

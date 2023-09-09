@@ -3,7 +3,7 @@ module github.com/acaloiaro/garbage_speak
 go 1.20
 
 require (
-	github.com/acaloiaro/neoq v0.18.0
+	github.com/acaloiaro/neoq v0.24.0
 	github.com/alexedwards/scs/pgxstore v0.0.0-20230327161757-10d4299e3b24
 	github.com/alexedwards/scs/v2 v2.5.1
 	github.com/georgysavva/scany/v2 v2.0.0
@@ -24,6 +24,7 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/iancoleman/strcase v0.2.0 // indirect
+	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/puddle/v2 v2.2.0 // indirect
