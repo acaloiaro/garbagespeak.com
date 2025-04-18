@@ -29,7 +29,7 @@ jobs:
       - name: Garbagespeak Build
         run: |
           mkdir out
-          go build -o "out/garbage-speak-${GITHUB_SHA}" server.go
+          CGO_ENABLED=0 go build -o "out/garbage-speak-${GITHUB_SHA}" server.go
       - name: S3 Sync
         uses: jakejarvis/s3-sync-action@v0.5.1
         env:
@@ -43,13 +43,16 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Tailscale Login
-        uses: tailscale/github-action@main
+      - name: Tailscale login
+        uses: tailscale/github-action@v2
         with:
-          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
-          version: 1.32.1
+          version: 1.76.6
+          oauth-client-id: kexKXpQZxu11CNTRL
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:github-action
         env:
           ADDITIONAL_ARGS: "--accept-dns"
+
       - name: Checkout
         uses: actions/checkout@v2
         with:
@@ -62,7 +65,7 @@ jobs:
           tailscale status
           nomad job run -var version=${GITHUB_SHA} -var b2_access_key_id=${B2_ACCESS_KEY_ID} -var b2_secret_access_key=${B2_SECRET_ACCESS_KEY} job.nomad.hcl
         env:
-          NOMAD_ADDR: http://cluster-0:4646
+          NOMAD_ADDR: http://ncm-0:4646
           NOMAD_TOKEN: ${{ secrets.NOMAD_TOKEN }}
           B2_ACCESS_KEY_ID: ${{ secrets.B2_ACCESS_KEY_ID }}
           B2_SECRET_ACCESS_KEY: ${{ secrets.B2_SECRET_ACCESS_KEY }}

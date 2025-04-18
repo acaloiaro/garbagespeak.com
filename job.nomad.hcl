@@ -12,15 +12,15 @@ variable "b2_secret_access_key" {
 
 job "garbage_speak" {
   datacenters = ["dc1"]
-  namespace = "default"
+  namespace   = "default"
 
   group "task" {
-    count = 2
-    
+    count = 1
+
     network {
       port "garbage_speak" {
-        to = 1314
-        host_network = "private"
+        to           = 1314
+        host_network = "tailnet"
       }
     }
 
@@ -28,7 +28,7 @@ job "garbage_speak" {
       driver = "exec"
 
       config {
-        command = "garbage-speak-${var.version}"
+        command = "./local/garbage-speak-${var.version}"
       }
 
       artifact {
@@ -40,30 +40,32 @@ job "garbage_speak" {
       }
 
       template {
-        data = <<EOF
-        {{ with nomadVar "nomad/jobs/garbage_speak" }}POSTGRES_URL=postgresql://{{ .POSTGRES_USER }}:{{ .POSTGRES_PASSWORD }}{{end}}@{{ range nomadService "postgres" }}{{ .Address }}:{{ .Port }}{{ end }}/garbage_speak?sslmode=disable
-{{ with nomadVar "nomad/jobs/garbage_speak" }}SMTP_PASSWORD={{ .SMTP_PASSWORD }}
-SMTP_USERNAME={{ .SMTP_USERNAME }}
-SMTP_HOST={{ .SMTP_HOST }}{{ end }}
-GO_ENV=production
-SITE_DOMAIN=garbagespeak.com
+        data        = <<EOF
+{{ with nomadVar "nomad/jobs" }}
+POSTGRES_URL=postgresql://postgres:{{ .postgres_password }}{{end}}@{{ range nomadService "postgres" }}{{ .Address }}:{{ .Port }}{{ end }}/garbage_speak?sslmode=disable
+{{ with nomadVar "nomad/jobs/garbage_speak" }}SMTP_PASSWORD={{ .SMTP_PASSWORD }}{{ end }}
 EOF
         destination = "local/env"
-        env = true
+        env         = true
       }
 
       env {
+        SMTP_USERNAME = "postmaster@garbagespeak.com"
+        SMTP_HOST     = "smtp.mailgun.org:587"
+        GO_ENV        = "production"
+        SITE_DOMAIN   = "garbagespeak.com"
       }
 
       resources {
-        cpu = 1024
-        memory = 1024
+        cpu    = 128
+        memory = 128
       }
 
       service {
-        port = "garbage_speak"
-        name = "garbage-speak"
-        provider = "nomad"
+        port         = "garbage_speak"
+        name         = "garbage_speak"
+        provider     = "nomad"
+        address_mode = "host"
       }
     }
   }
