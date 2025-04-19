@@ -50,10 +50,11 @@ EOF
       }
 
       env {
-        SMTP_USERNAME = "postmaster@garbagespeak.com"
-        SMTP_HOST     = "smtp.mailgun.org:587"
-        GO_ENV        = "production"
-        SITE_DOMAIN   = "garbagespeak.com"
+        SMTP_USERNAME          = "postmaster@garbagespeak.com"
+        SMTP_HOST              = "smtp.mailgun.org:587"
+        GO_ENV                 = "production"
+        SITE_DOMAIN            = "garbagespeak.com"
+        GOOGLE_OAUTH_CLIENT_ID = "1038207836187-uivhpqmd2aps0q61hr0q62k6vcgghegc.apps.googleusercontent.com"
       }
 
       resources {
@@ -63,7 +64,7 @@ EOF
 
       service {
         port         = "garbage_speak"
-        name         = "garbage_speak"
+        name         = "garbage-speak"
         provider     = "nomad"
         address_mode = "host"
       }
