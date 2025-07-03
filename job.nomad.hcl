@@ -59,7 +59,7 @@ EOF
 
       resources {
         cpu    = 128
-        memory = 128
+        memory = 64
       }
 
       service {
