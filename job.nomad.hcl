@@ -19,8 +19,7 @@ job "garbage_speak" {
 
     network {
       port "garbage_speak" {
-        to           = 1314
-        host_network = "tailnet"
+        to = 1314
       }
     }
 
@@ -44,7 +43,7 @@ job "garbage_speak" {
       template {
         data        = <<EOF
 {{ with nomadVar "nomad/jobs" }}
-POSTGRES_URL=postgresql://postgres:{{ .postgres_password }}{{end}}@{{ range nomadService "postgres" }}{{ .Address }}:{{ .Port }}{{ end }}/garbage_speak?sslmode=disable
+POSTGRES_URL=postgresql://{{ .postgres_user }}:{{ .postgres_password }}@{{ .postgres_host }}:{{ .postgres_port }}/garbage_speak?sslmode=require{{ end }}
 {{ with nomadVar "nomad/jobs/garbage_speak" }}SMTP_PASSWORD={{ .SMTP_PASSWORD }}{{ end }}
 EOF
         destination = "local/env"
