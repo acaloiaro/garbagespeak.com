@@ -153,7 +153,7 @@ func init() {
 		os.Exit(1)
 	}
 
-	err = NQ.Start(ctx, "welcome_email", handler.New(welcomeEmailHandler))
+	err = NQ.Start(ctx, handler.New("welcome_email", welcomeEmailHandler))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to initialize welcome email handler: %v\n", err)
 		os.Exit(1)
