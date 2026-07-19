@@ -1,3 +1,5 @@
+**NOTICE**: This repository has been moved to [https://code.adriano.fyi/me/garbagespeak.com](https://code.adriano.fyi/me/garbagespeak.com). Microsoft has shown little interest in stewarding what was once the best and largest open source community. This small act of migration is my way showing that we don't all support Microsoft's disinterest.
+
 # Garbage Speak
 
 A fun, dumb, and ultimately useless website inspired by this [tour de force on corporate garabe speak](https://www.vulture.com/2020/02/spread-of-corporate-speak.html).
